@@ -377,7 +377,7 @@ end
             }, SectionButton)
 
             local UIGradient = library:create("UIGradient", {
-                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(81, 97, 243)), ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))},
+                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 30, 30)), ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))},
             }, SectionDecoration)
 
             local SectionFrame = library:create("Frame", {
