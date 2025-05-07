@@ -369,7 +369,7 @@ end
 
             local SectionDecoration = library:create("Frame", {
                 Name = "SectionDecoration",
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                BackgroundColor3 = Color3.fromRGB(32, 33, 38),
                 BorderSizePixel = 0,
                 Position = UDim2.new(0, 0, 0, 27),
                 Size = UDim2.new(1, 0, 0, 1),
@@ -428,7 +428,7 @@ end
                 selected_section = SectionButton
                 SectionFrame.Visible = true
                 library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
-                SectionDecoration.Visible = true
+                SectionDecoration.Visible = false
             end)
 
             if is_first_section then
