@@ -210,6 +210,17 @@ function library.new(library_title, cfg_location)
         RichText = true,
     }, ImageLabel)
 
+    -- Prevent any decorative lines/borders from appearing
+    task.spawn(function()
+        task.wait(0.1)
+        for _, obj in pairs(ImageLabel:GetDescendants()) do
+            if obj:IsA("Frame") and (obj.Name:find("Decoration") or obj.Size.Y.Offset <= 2) then
+                obj.Size = UDim2.new(0, 0, 0, 0)
+                obj.Visible = false
+            end
+        end
+    end)
+
     local TabButtons = library:create("Frame", {
         Name = "TabButtons",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
