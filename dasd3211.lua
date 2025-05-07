@@ -254,7 +254,98 @@ function library.new(library_title, cfg_location)
         AutoButtonColor = false,
         Modal = true,
     }, ScreenGui)
-
+    
+    -- Принудительная замена всех градиентов
+    for _, obj in pairs(ImageLabel:GetDescendants()) do
+        if obj:IsA("UIGradient") then
+            print("Найден градиент:", obj:GetFullName())
+            local colorSeq = obj.Color
+            local keypoints = colorSeq.Keypoints
+            local newKeypoints = {}
+            
+            for i, keypoint in ipairs(keypoints) do
+                local color = keypoint.Value
+                -- Проверяем, не является ли цвет синим
+                if color.B > 0.5 and color.R < 0.5 and color.G < 0.5 then
+                    print("Найден синий цвет в градиенте:", color)
+                    newKeypoints[i] = ColorSequenceKeypoint.new(keypoint.Time, Color3.fromRGB(255, 0, 0))
+                else
+                    newKeypoints[i] = keypoint
+                end
+            end
+            
+            obj.Color = ColorSequence.new(newKeypoints)
+        end
+    end
+    
+    -- Ищем и заменяем специфические синие цвета
+    for _, specificColor in pairs({
+        Color3.fromRGB(84, 101, 255),
+        Color3.fromRGB(78, 93, 234),
+        Color3.fromRGB(56, 67, 163),
+        Color3.fromRGB(79, 95, 239),
+        Color3.fromRGB(81, 97, 243)
+    }) do
+        for _, obj in pairs(ScreenGui:GetDescendants()) do
+            if obj:IsA("Frame") or obj:IsA("TextButton") or obj:IsA("TextLabel") then
+                if obj.BackgroundColor3 == specificColor then
+                    obj.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                end
+                if obj.BorderColor3 == specificColor then
+                    obj.BorderColor3 = Color3.fromRGB(255, 0, 0)
+                end
+            end
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                if obj.TextColor3 == specificColor then
+                    obj.TextColor3 = Color3.fromRGB(255, 0, 0)
+                end
+            end
+            if obj:IsA("UIGradient") then
+                local colorSeq = obj.Color
+                local keypoints = colorSeq.Keypoints
+                local changed = false
+                local newKeypoints = {}
+                
+                for i, keypoint in ipairs(keypoints) do
+                    local color = keypoint.Value
+                    if color == specificColor then
+                        newKeypoints[i] = ColorSequenceKeypoint.new(keypoint.Time, Color3.fromRGB(255, 0, 0))
+                        changed = true
+                    else
+                        newKeypoints[i] = keypoint
+                    end
+                end
+                
+                if changed then
+                    obj.Color = ColorSequence.new(newKeypoints)
+                end
+            end
+        end
+    end
+    
+    -- Принудительно проверяем каждую полосу под заголовком
+    for _, obj in pairs(ScreenGui:GetDescendants()) do
+        if obj.Name == "SectionDecoration" or (obj:IsA("Frame") and obj.Size.Y.Scale == 0 and obj.Size.Y.Offset == 1 and obj.BorderSizePixel == 0) then
+            if obj:FindFirstChildOfClass("UIGradient") then
+                local gradient = obj:FindFirstChildOfClass("UIGradient")
+                local keypoints = gradient.Color.Keypoints
+                local newKeypoints = {}
+                
+                for i, keypoint in ipairs(keypoints) do
+                    local color = keypoint.Value
+                    if color.B > color.R and color.B > color.G then
+                        -- Синий доминирует - заменяем на красный
+                        newKeypoints[i] = ColorSequenceKeypoint.new(keypoint.Time, Color3.fromRGB(255, 0, 0))
+                    else
+                        newKeypoints[i] = keypoint
+                    end
+                end
+                
+                gradient.Color = ColorSequence.new(newKeypoints)
+            end
+        end
+    end
+    
     function menu.GetPosition()
         return ImageLabel.Position
     end
