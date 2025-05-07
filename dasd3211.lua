@@ -1,5 +1,71 @@
 local library = {}
 
+-- Replace all blue colors with red in the UI
+local function replaceBlueWithRed(object)
+    if typeof(object) == "Instance" then
+        -- Replace properties if they exist
+        for _, prop in pairs({"BackgroundColor3", "BorderColor3", "TextColor3", "ImageColor3", "ScrollBarImageColor3"}) do
+            if object[prop] ~= nil then
+                local color = object[prop]
+                -- Check for blue-ish colors
+                if color.R < 0.4 and color.G < 0.4 and color.B > 0.6 then
+                    object[prop] = Color3.fromRGB(255, 0, 0) -- Replace with red
+                end
+                -- Check for specific blue colors used in the UI
+                if color == Color3.fromRGB(84, 101, 255) then
+                    object[prop] = Color3.fromRGB(255, 0, 0)
+                elseif color == Color3.fromRGB(81, 97, 243) then
+                    object[prop] = Color3.fromRGB(255, 0, 0)
+                elseif color == Color3.fromRGB(56, 67, 163) then
+                    object[prop] = Color3.fromRGB(200, 0, 0)
+                elseif color == Color3.fromRGB(79, 95, 239) then
+                    object[prop] = Color3.fromRGB(255, 0, 0)
+                end
+            end
+        end
+        
+        -- For UIGradient objects, replace their ColorSequence if it contains blue colors
+        if object:IsA("UIGradient") and object.Color ~= nil then
+            local colorSeq = object.Color
+            local keypoints = colorSeq.Keypoints
+            local newKeypoints = {}
+            
+            for i, keypoint in ipairs(keypoints) do
+                local color = keypoint.Value
+                local newColor = color
+                
+                -- Replace blue colors in gradient
+                if color == Color3.fromRGB(84, 101, 255) then
+                    newColor = Color3.fromRGB(255, 0, 0)
+                elseif color == Color3.fromRGB(81, 97, 243) then
+                    newColor = Color3.fromRGB(255, 0, 0)
+                elseif color == Color3.fromRGB(56, 67, 163) then
+                    newColor = Color3.fromRGB(200, 0, 0)
+                elseif color == Color3.fromRGB(79, 95, 239) then
+                    newColor = Color3.fromRGB(255, 0, 0)
+                end
+                
+                table.insert(newKeypoints, ColorSequenceKeypoint.new(keypoint.Time, newColor))
+            end
+            
+            object.Color = ColorSequence.new(newKeypoints)
+        end
+        
+        -- Process children recursively
+        for _, child in ipairs(object:GetChildren()) do
+            replaceBlueWithRed(child)
+        end
+    end
+end
+
+-- Hook into the create function to modify new objects
+local originalCreate = library.create
+library.create = function(...)
+    local obj = originalCreate(...)
+    replaceBlueWithRed(obj)
+    return obj
+end
+
 local TweenService = game:GetService("TweenService")
 function library:tween(...) TweenService:Create(...):Play() end
 
@@ -210,17 +276,6 @@ function library.new(library_title, cfg_location)
         RichText = true,
     }, ImageLabel)
 
-    -- Prevent any decorative lines/borders from appearing
-    task.spawn(function()
-        task.wait(0.1)
-        for _, obj in pairs(ImageLabel:GetDescendants()) do
-            if obj:IsA("Frame") and (obj.Name:find("Decoration") or obj.Size.Y.Offset <= 2) then
-                obj.Size = UDim2.new(0, 0, 0, 0)
-                obj.Visible = false
-            end
-        end
-    end)
-
     local TabButtons = library:create("Frame", {
         Name = "TabButtons",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -383,7 +438,7 @@ end
                 BackgroundColor3 = Color3.fromRGB(255, 255, 255),
                 BorderSizePixel = 0,
                 Position = UDim2.new(0, 0, 0, 27),
-                Size = UDim2.new(0, 0, 0, 0),
+                Size = UDim2.new(1, 0, 0, 1),
                 Visible = false,
             }, SectionButton)
 
@@ -439,7 +494,7 @@ end
                 selected_section = SectionButton
                 SectionFrame.Visible = true
                 library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
-                -- SectionDecoration.Visible = true  -- Commented out
+                SectionDecoration.Visible = true
             end)
 
             if is_first_section then
@@ -448,7 +503,7 @@ end
 
                 SectionButton.TextColor3 = Color3.fromRGB(84, 101, 255) 
     
-                -- SectionDecoration.Visible = true  -- Commented out
+                SectionDecoration.Visible = true
                 SectionFrame.Visible = true
             end
 
