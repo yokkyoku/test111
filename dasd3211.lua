@@ -177,175 +177,18 @@ function library.new(library_title, cfg_location)
         end
 	end)
 
-    -- Добавляем код для поиска и замены всех синих элементов
-    local function findAndReplaceBlue(parent) 
-        for _, obj in pairs(parent:GetDescendants()) do
-            -- Проверяем все свойства, которые могут содержать синий цвет
-            if obj:IsA("Frame") or obj:IsA("TextButton") or obj:IsA("TextLabel") or obj:IsA("ImageLabel") or obj:IsA("ScrollingFrame") then
-                -- Заменяем BorderColor3
-                if obj.BorderColor3 == Color3.fromRGB(84, 101, 255) then
-                    obj.BorderColor3 = Color3.fromRGB(255, 0, 0)
-                end
-                
-                -- Заменяем BackgroundColor3
-                if obj.BackgroundColor3 == Color3.fromRGB(84, 101, 255) then
-                    obj.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-                end
-            end
-            
-            -- Проверяем текстовые объекты
-            if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-                if obj.TextColor3 == Color3.fromRGB(84, 101, 255) then
-                    obj.TextColor3 = Color3.fromRGB(255, 0, 0)
-                end
-            end
-            
-            -- Проверяем ImageLabel
-            if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
-                if obj.ImageColor3 == Color3.fromRGB(84, 101, 255) then
-                    obj.ImageColor3 = Color3.fromRGB(255, 0, 0)
-                end
-            end
-            
-            -- Проверяем UIGradient
-            if obj:IsA("UIGradient") then
-                local colorSeq = obj.Color
-                local keypoints = colorSeq.Keypoints
-                local newKeypoints = {}
-                local changed = false
-                
-                for i, keypoint in ipairs(keypoints) do
-                    local color = keypoint.Value
-                    if color == Color3.fromRGB(84, 101, 255) or 
-                       (color.R < 0.1 and color.G < 0.1 and color.B > 0.9) or
-                       (color.R < 0.4 and color.G < 0.5 and color.B > 0.8) then
-                        newKeypoints[i] = ColorSequenceKeypoint.new(keypoint.Time, Color3.fromRGB(255, 0, 0))
-                        changed = true
-                    else
-                        newKeypoints[i] = keypoint
-                    end
-                end
-                
-                if changed then
-                    obj.Color = ColorSequence.new(newKeypoints)
-                end
-            end
-            
-            -- Проверяем ScrollBarImageColor3
-            if obj:IsA("ScrollingFrame") then
-                if obj.ScrollBarImageColor3 == Color3.fromRGB(84, 101, 255) then
-                    obj.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0)
-                end
-            end
-        end
-    end
-
-    -- Выполним замену один раз после создания интерфейса
-    findAndReplaceBlue(ScreenGui)
-
     local ImageLabel = library:create("ImageButton", {
         Name = "Main",
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = Color3.fromRGB(15, 15, 15),
-        BorderColor3 = Color3.fromRGB(255, 0, 0),
+        BorderColor3 = Color3.fromRGB(78, 93, 234),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.new(0, 700, 0, 500),
         Image = "http://www.roblox.com/asset/?id=7300333488",
         AutoButtonColor = false,
         Modal = true,
     }, ScreenGui)
-    
-    -- Принудительная замена всех градиентов
-    for _, obj in pairs(ImageLabel:GetDescendants()) do
-        if obj:IsA("UIGradient") then
-            print("Найден градиент:", obj:GetFullName())
-            local colorSeq = obj.Color
-            local keypoints = colorSeq.Keypoints
-            local newKeypoints = {}
-            
-            for i, keypoint in ipairs(keypoints) do
-                local color = keypoint.Value
-                -- Проверяем, не является ли цвет синим
-                if color.B > 0.5 and color.R < 0.5 and color.G < 0.5 then
-                    print("Найден синий цвет в градиенте:", color)
-                    newKeypoints[i] = ColorSequenceKeypoint.new(keypoint.Time, Color3.fromRGB(255, 0, 0))
-                else
-                    newKeypoints[i] = keypoint
-                end
-            end
-            
-            obj.Color = ColorSequence.new(newKeypoints)
-        end
-    end
-    
-    -- Ищем и заменяем специфические синие цвета
-    for _, specificColor in pairs({
-        Color3.fromRGB(84, 101, 255),
-        Color3.fromRGB(78, 93, 234),
-        Color3.fromRGB(56, 67, 163),
-        Color3.fromRGB(79, 95, 239),
-        Color3.fromRGB(81, 97, 243)
-    }) do
-        for _, obj in pairs(ScreenGui:GetDescendants()) do
-            if obj:IsA("Frame") or obj:IsA("TextButton") or obj:IsA("TextLabel") then
-                if obj.BackgroundColor3 == specificColor then
-                    obj.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-                end
-                if obj.BorderColor3 == specificColor then
-                    obj.BorderColor3 = Color3.fromRGB(255, 0, 0)
-                end
-            end
-            if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-                if obj.TextColor3 == specificColor then
-                    obj.TextColor3 = Color3.fromRGB(255, 0, 0)
-                end
-            end
-            if obj:IsA("UIGradient") then
-                local colorSeq = obj.Color
-                local keypoints = colorSeq.Keypoints
-                local changed = false
-                local newKeypoints = {}
-                
-                for i, keypoint in ipairs(keypoints) do
-                    local color = keypoint.Value
-                    if color == specificColor then
-                        newKeypoints[i] = ColorSequenceKeypoint.new(keypoint.Time, Color3.fromRGB(255, 0, 0))
-                        changed = true
-                    else
-                        newKeypoints[i] = keypoint
-                    end
-                end
-                
-                if changed then
-                    obj.Color = ColorSequence.new(newKeypoints)
-                end
-            end
-        end
-    end
-    
-    -- Принудительно проверяем каждую полосу под заголовком
-    for _, obj in pairs(ScreenGui:GetDescendants()) do
-        if obj.Name == "SectionDecoration" or (obj:IsA("Frame") and obj.Size.Y.Scale == 0 and obj.Size.Y.Offset == 1 and obj.BorderSizePixel == 0) then
-            if obj:FindFirstChildOfClass("UIGradient") then
-                local gradient = obj:FindFirstChildOfClass("UIGradient")
-                local keypoints = gradient.Color.Keypoints
-                local newKeypoints = {}
-                
-                for i, keypoint in ipairs(keypoints) do
-                    local color = keypoint.Value
-                    if color.B > color.R and color.B > color.G then
-                        -- Синий доминирует - заменяем на красный
-                        newKeypoints[i] = ColorSequenceKeypoint.new(keypoint.Time, Color3.fromRGB(255, 0, 0))
-                    else
-                        newKeypoints[i] = keypoint
-                    end
-                end
-                
-                gradient.Color = ColorSequence.new(newKeypoints)
-            end
-        end
-    end
-    
+
     function menu.GetPosition()
         return ImageLabel.Position
     end
@@ -457,7 +300,7 @@ end
             is_first_tab = false
             selected_tab = TabButton
 
-            TabImage.ImageColor3 = Color3.fromRGB(255, 0, 0)
+            TabImage.ImageColor3 = Color3.fromRGB(84, 101, 255)
             Tab.Visible = true
         end
 
@@ -474,7 +317,7 @@ end
             end
             Tab.Visible = true
             selected_tab = TabButton
-            library:tween(TabImage, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(255, 0, 0)})
+            library:tween(TabImage, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(84, 101, 255)})
         end)
         TabButton.MouseEnter:Connect(function()
             if selected_tab == TabButton then return end
@@ -534,7 +377,7 @@ end
             }, SectionButton)
 
             local UIGradient = library:create("UIGradient", {
-                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))},
+                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(81, 97, 243)), ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))},
             }, SectionDecoration)
 
             local SectionFrame = library:create("Frame", {
@@ -584,7 +427,7 @@ end
 
                 selected_section = SectionButton
                 SectionFrame.Visible = true
-                library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 0, 0)})
+                library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
                 SectionDecoration.Visible = true
             end)
 
@@ -592,7 +435,7 @@ end
                 is_first_section = false
                 selected_section = SectionButton
 
-                SectionButton.TextColor3 = Color3.fromRGB(255, 0, 0) 
+                SectionButton.TextColor3 = Color3.fromRGB(84, 101, 255) 
     
                 SectionDecoration.Visible = true
                 SectionFrame.Visible = true
@@ -731,7 +574,7 @@ end
                             menu.values[tab.tab_num][section_name][sector_name][flag] = value
 
                             if value.Toggle then
-                                library:tween(ToggleFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)})
+                                library:tween(ToggleFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(84, 101, 255)})
                                 library:tween(ToggleText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 255, 255)})
                             else
                                 library:tween(ToggleFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)})
@@ -810,7 +653,7 @@ end
                             end)
                             KeybindFrame.MouseEnter:Connect(function()
                                 keybind_in2 = true
-                                library:tween(KeybindFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(255, 0, 0)})
+                                library:tween(KeybindFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(84, 101, 255)})
                             end)
                             KeybindFrame.MouseLeave:Connect(function()
                                 keybind_in2 = false
@@ -830,7 +673,7 @@ end
                                 Size = UDim2.new(1, 0, 0, 25),
                                 Font = Enum.Font.Ubuntu,
                                 Text = "Always",
-                                TextColor3 = Color3.fromRGB(255, 0, 0),
+                                TextColor3 = Color3.fromRGB(84, 101, 255),
                                 TextSize = 14,
                                 ZIndex = 2,
                             }, KeybindFrame)
@@ -885,7 +728,7 @@ end
                                         if TypeButton2:IsA("UIListLayout") then continue end
                                         library:tween(TypeButton2, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
                                     end
-                                    library:tween(TypeButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 0, 0)})
+                                    library:tween(TypeButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
                                 end)
                             end
 
@@ -957,7 +800,7 @@ end
                                     if TypeButton2.Name ~= extra_value.Type then
                                         library:tween(TypeButton2, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
                                     else
-                                        library:tween(TypeButton2, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 0, 0)})
+                                        library:tween(TypeButton2, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
                                     end
                                 end
 
@@ -1071,7 +914,7 @@ end
                             end)
                             ColorFrame.MouseEnter:Connect(function()
                                 in_color = true
-                                library:tween(ColorFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(255, 0, 0)})
+                                library:tween(ColorFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(84, 101, 255)})
                             end)
                             ColorFrame.MouseLeave:Connect(function()
                                 in_color = false
@@ -1421,7 +1264,7 @@ end
 
                             local Decoration = library:create("Frame", {
                                 Name = "Decoration",
-                                BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+                                BackgroundColor3 = Color3.fromRGB(84, 101, 255),
                                 BorderSizePixel = 0,
                                 Size = UDim2.new(0, 1, 1, 0),
                                 Visible = false,
@@ -1670,7 +1513,7 @@ end
 
                             local Decoration = library:create("Frame", {
                                 Name = "Decoration",
-                                BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+                                BackgroundColor3 = Color3.fromRGB(84, 101, 255),
                                 BorderSizePixel = 0,
                                 Size = UDim2.new(0, 1, 1, 0),
                                 Visible = false,
@@ -1742,7 +1585,7 @@ end
                             library:tween(Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
                         end)
                         Button.MouseButton1Down:Connect(function()
-                            Button.BorderColor3 = Color3.fromRGB(255, 0, 0)
+                            Button.BorderColor3 = Color3.fromRGB(84, 101, 255)
                             library:tween(Button, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(0, 0, 0)})
                             do_callback()
                         end)
@@ -1802,7 +1645,7 @@ end
                         end)
                         uis.TextBoxFocused:connect(function()
                             if uis:GetFocusedTextBox() == TextBox then
-                                library:tween(TextBox, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(255, 0, 0)})
+                                library:tween(TextBox, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(84, 101, 255)})
                             end
                         end)
                         uis.TextBoxFocusReleased:connect(function()
@@ -1859,7 +1702,7 @@ end
                             ScrollBarThickness = 2,
                             TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
                             AnchorPoint = Vector2.new(0.5, 0),
-                            ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0),
+                            ScrollBarImageColor3 = Color3.fromRGB(84, 101, 255),
                         }, Scroll)
                         ScrollFrame.MouseEnter:Connect(function()
                             library:tween(ScrollFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(50, 50, 50)})
@@ -1905,7 +1748,7 @@ end
                             local Decoration = library:create("Frame", {
                                 Name = "Decoration",
                                 Parent = Button,
-                                BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+                                BackgroundColor3 = Color3.fromRGB(84, 101, 255),
                                 BorderSizePixel = 0,
                                 Size = UDim2.new(0, 1, 1, 0),
                                 Visible = false,
@@ -1983,7 +1826,7 @@ end
                             local Decoration = library:create("Frame", {
                                 Name = "Decoration",
                                 Parent = Button,
-                                BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+                                BackgroundColor3 = Color3.fromRGB(84, 101, 255),
                                 BorderSizePixel = 0,
                                 Size = UDim2.new(0, 1, 1, 0),
                                 Visible = false,
@@ -2099,7 +1942,7 @@ end
                         }, SliderButton)
 
                         local UIGradient = library:create("UIGradient", {
-                            Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 0, 0))},
+                            Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(79, 95, 239)), ColorSequenceKeypoint.new(1, Color3.fromRGB(56, 67, 163))},
                             Rotation = 90,
                         }, SliderFrame)
 
