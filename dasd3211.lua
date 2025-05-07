@@ -428,7 +428,7 @@ end
                 selected_section = SectionButton
                 SectionFrame.Visible = true
                 library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
-                SectionDecoration.Visible = true
+                -- SectionDecoration.Visible = true  -- Commented out
             end)
 
             if is_first_section then
@@ -437,7 +437,7 @@ end
 
                 SectionButton.TextColor3 = Color3.fromRGB(84, 101, 255) 
     
-                SectionDecoration.Visible = true
+                -- SectionDecoration.Visible = true  -- Commented out
                 SectionFrame.Visible = true
             end
 
