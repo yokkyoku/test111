@@ -359,7 +359,7 @@ end
             SectionButton.MouseEnter:Connect(function()
                 if selected_section == SectionButton then return end
 
-                library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 255, 255)})
+                library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 30, 30)})
             end)
             SectionButton.MouseLeave:Connect(function()
                 if selected_section == SectionButton then return end
@@ -427,7 +427,7 @@ end
 
                 selected_section = SectionButton
                 SectionFrame.Visible = true
-                library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
+                library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 30, 30)})
                 SectionDecoration.Visible = true
             end)
 
@@ -435,7 +435,7 @@ end
                 is_first_section = false
                 selected_section = SectionButton
 
-                SectionButton.TextColor3 = Color3.fromRGB(84, 101, 255) 
+                SectionButton.TextColor3 = Color3.fromRGB(255, 30, 30) 
     
                 SectionDecoration.Visible = true
                 SectionFrame.Visible = true
