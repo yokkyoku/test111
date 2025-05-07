@@ -177,6 +177,72 @@ function library.new(library_title, cfg_location)
         end
 	end)
 
+    -- Добавляем код для поиска и замены всех синих элементов
+    local function findAndReplaceBlue(parent) 
+        for _, obj in pairs(parent:GetDescendants()) do
+            -- Проверяем все свойства, которые могут содержать синий цвет
+            if obj:IsA("Frame") or obj:IsA("TextButton") or obj:IsA("TextLabel") or obj:IsA("ImageLabel") or obj:IsA("ScrollingFrame") then
+                -- Заменяем BorderColor3
+                if obj.BorderColor3 == Color3.fromRGB(84, 101, 255) then
+                    obj.BorderColor3 = Color3.fromRGB(255, 0, 0)
+                end
+                
+                -- Заменяем BackgroundColor3
+                if obj.BackgroundColor3 == Color3.fromRGB(84, 101, 255) then
+                    obj.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                end
+            end
+            
+            -- Проверяем текстовые объекты
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                if obj.TextColor3 == Color3.fromRGB(84, 101, 255) then
+                    obj.TextColor3 = Color3.fromRGB(255, 0, 0)
+                end
+            end
+            
+            -- Проверяем ImageLabel
+            if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+                if obj.ImageColor3 == Color3.fromRGB(84, 101, 255) then
+                    obj.ImageColor3 = Color3.fromRGB(255, 0, 0)
+                end
+            end
+            
+            -- Проверяем UIGradient
+            if obj:IsA("UIGradient") then
+                local colorSeq = obj.Color
+                local keypoints = colorSeq.Keypoints
+                local newKeypoints = {}
+                local changed = false
+                
+                for i, keypoint in ipairs(keypoints) do
+                    local color = keypoint.Value
+                    if color == Color3.fromRGB(84, 101, 255) or 
+                       (color.R < 0.1 and color.G < 0.1 and color.B > 0.9) or
+                       (color.R < 0.4 and color.G < 0.5 and color.B > 0.8) then
+                        newKeypoints[i] = ColorSequenceKeypoint.new(keypoint.Time, Color3.fromRGB(255, 0, 0))
+                        changed = true
+                    else
+                        newKeypoints[i] = keypoint
+                    end
+                end
+                
+                if changed then
+                    obj.Color = ColorSequence.new(newKeypoints)
+                end
+            end
+            
+            -- Проверяем ScrollBarImageColor3
+            if obj:IsA("ScrollingFrame") then
+                if obj.ScrollBarImageColor3 == Color3.fromRGB(84, 101, 255) then
+                    obj.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0)
+                end
+            end
+        end
+    end
+
+    -- Выполним замену один раз после создания интерфейса
+    findAndReplaceBlue(ScreenGui)
+
     local ImageLabel = library:create("ImageButton", {
         Name = "Main",
         AnchorPoint = Vector2.new(0.5, 0.5),
