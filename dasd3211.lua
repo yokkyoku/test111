@@ -431,15 +431,6 @@ end
                 SectionDecoration.Visible = true
             end)
 
-            if is_first_section then
-                is_first_section = false
-                selected_section = SectionButton
-
-                SectionButton.TextColor3 = Color3.fromRGB(84, 101, 255) 
-    
-                SectionDecoration.Visible = true
-                SectionFrame.Visible = true
-            end
 
             function section.new_sector(sector_name, sector_side)
                 local sector = {}
