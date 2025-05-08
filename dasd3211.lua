@@ -84,15 +84,48 @@ end
 
 -- Initialize the ImGui system
 function ImGui.Init()
-    -- Create parent ScreenGui
-    ImGui.ScreenGui = createInstance("ScreenGui", {
-        Name = "ImGuiScreenGui",
-        ResetOnSpawn = false,
-        ZIndexBehavior = Enum.ZIndexBehavior.Global,
-        DisplayOrder = 999,
-        IgnoreGuiInset = true,
-        Parent = CoreGui
-    })
+    -- Create parent ScreenGui with proper error handling
+    local success, screenGui
+    
+    -- Try to place in CoreGui first (works in exploits), but fallback to PlayerGui
+    success, screenGui = pcall(function()
+        local gui = createInstance("ScreenGui", {
+            Name = "ImGuiScreenGui",
+            ResetOnSpawn = false,
+            ZIndexBehavior = Enum.ZIndexBehavior.Global,
+            DisplayOrder = 999,
+            IgnoreGuiInset = true,
+            Parent = CoreGui
+        })
+        return gui
+    end)
+    
+    -- If failed, try PlayerGui instead
+    if not success then
+        local playerGui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
+        if playerGui then
+            screenGui = createInstance("ScreenGui", {
+                Name = "ImGuiScreenGui",
+                ResetOnSpawn = false,
+                ZIndexBehavior = Enum.ZIndexBehavior.Global,
+                DisplayOrder = 999,
+                IgnoreGuiInset = true,
+                Parent = playerGui
+            })
+        else
+            -- Last resort: parent to game.Workspace
+            screenGui = createInstance("ScreenGui", {
+                Name = "ImGuiScreenGui",
+                ResetOnSpawn = false,
+                ZIndexBehavior = Enum.ZIndexBehavior.Global,
+                DisplayOrder = 999,
+                IgnoreGuiInset = true
+            })
+            screenGui.Parent = game.Workspace
+        end
+    end
+    
+    ImGui.ScreenGui = screenGui
     
     -- Setup input handling
     UserInputService.InputBegan:Connect(function(input)
@@ -386,9 +419,16 @@ function ImGui.BringWindowToFront(window)
     -- Set this window's ZIndex higher
     window.instance.ZIndex = highestZIndex + 1
     
-    -- Adjust child elements' ZIndex
+    -- Adjust child elements' ZIndex (only for elements that support ZIndex)
     for _, child in ipairs(window.instance:GetDescendants()) do
-        child.ZIndex = child.ZIndex + highestZIndex
+        -- Check if the object has a ZIndex property before setting it
+        local success, _ = pcall(function()
+            local testZIndex = child.ZIndex
+        end)
+        
+        if success then
+            child.ZIndex = child.ZIndex + highestZIndex
+        end
     end
 end
 
@@ -993,15 +1033,24 @@ function ImGui.InputText(label, text, width)
                      ImGui.mouse.position.Y >= inputContainer.AbsolutePosition.Y and
                      ImGui.mouse.position.Y <= inputContainer.AbsolutePosition.Y + inputHeight
     
+    -- Calculate hover and focus colors properly
+    local bgColor = ImGui.style.inputBgColor
+    local hoverColor = Color3.fromRGB(
+        math.min(255, bgColor.R * 255 + 10),
+        math.min(255, bgColor.G * 255 + 10),
+        math.min(255, bgColor.B * 255 + 10)
+    )
+    local focusColor = Color3.fromRGB(
+        math.min(255, bgColor.R * 255 + 15),
+        math.min(255, bgColor.G * 255 + 15),
+        math.min(255, bgColor.B * 255 + 20)
+    )
+    
     if isHovered then
         ImGui.hoveredItem = inputId
         -- Hover effect
         TweenService:Create(inputContainer, TweenInfo.new(0.1), {
-            BackgroundColor3 = Color3.fromRGB(
-                ImGui.style.inputBgColor.R * 255 + 10,
-                ImGui.style.inputBgColor.G * 255 + 10,
-                ImGui.style.inputBgColor.B * 255 + 10
-            )
+            BackgroundColor3 = hoverColor
         }):Play()
     else
         -- Reset color
@@ -1013,11 +1062,7 @@ function ImGui.InputText(label, text, width)
     -- Focus effect
     inputBox.Focused:Connect(function()
         TweenService:Create(inputContainer, TweenInfo.new(0.2), {
-            BackgroundColor3 = Color3.fromRGB(
-                ImGui.style.inputBgColor.R * 255 + 15,
-                ImGui.style.inputBgColor.G * 255 + 15, 
-                ImGui.style.inputBgColor.B * 255 + 20
-            )
+            BackgroundColor3 = focusColor
         }):Play()
         
         -- Highlight the stroke
