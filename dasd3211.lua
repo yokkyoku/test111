@@ -1,6 +1,6 @@
 -- RobloxImGui: Compact ImGui-style UI library
 local ImGui = {
-    _VERSION = "1.0.0",
+    _VERSION = "1.0.2",
     _AUTHOR = "Claude",
     
     -- State variables
@@ -31,9 +31,10 @@ local ImGui = {
         frameRounding = 4,
         
         -- Performance options
-        useGradients = false,  -- Disable gradients for better performance
-        useAnimations = true,  -- Can disable animations for better performance
-        animationSpeed = 0.1,  -- Faster animations (was 0.2)
+        useGradients = false,  -- Default to disabled for better performance
+        useAnimations = false, -- Default to disabled for better performance
+        animationSpeed = 0.05, -- Faster animations (was 0.1)
+        minAnimationDistance = 2, -- Don't animate tiny movements
     },
     
     -- UI element IDs
@@ -49,6 +50,7 @@ local ImGui = {
     -- Input tracking
     mouse = {
         position = Vector2.new(0, 0),
+        lastPosition = Vector2.new(0, 0),  -- Track last position for better drag detection
         leftPressed = false,
         leftReleased = false,
         leftDown = false
@@ -99,7 +101,7 @@ function ImGui.Init(options)
         local gui = createInstance("ScreenGui", {
             Name = "ImGuiScreenGui",
             ResetOnSpawn = false,
-            ZIndexBehavior = Enum.ZIndexBehavior.Global,
+            ZIndexBehavior = Enum.ZIndexBehavior.Sibling, -- Changed from Global for better performance
             DisplayOrder = 999,
             IgnoreGuiInset = true,
             Parent = CoreGui
@@ -114,7 +116,7 @@ function ImGui.Init(options)
             screenGui = createInstance("ScreenGui", {
                 Name = "ImGuiScreenGui",
                 ResetOnSpawn = false,
-                ZIndexBehavior = Enum.ZIndexBehavior.Global,
+                ZIndexBehavior = Enum.ZIndexBehavior.Sibling, -- Changed from Global for better performance
                 DisplayOrder = 999,
                 IgnoreGuiInset = true,
                 Parent = playerGui
@@ -124,7 +126,7 @@ function ImGui.Init(options)
             screenGui = createInstance("ScreenGui", {
                 Name = "ImGuiScreenGui",
                 ResetOnSpawn = false,
-                ZIndexBehavior = Enum.ZIndexBehavior.Global,
+                ZIndexBehavior = Enum.ZIndexBehavior.Sibling, -- Changed from Global for better performance
                 DisplayOrder = 999,
                 IgnoreGuiInset = true
             })
@@ -134,7 +136,14 @@ function ImGui.Init(options)
     
     ImGui.ScreenGui = screenGui
     
-    -- Setup input handling
+    -- Initialize mouse position
+    pcall(function()
+        local mousePos = UserInputService:GetMouseLocation()
+        ImGui.mouse.position = Vector2.new(mousePos.X, mousePos.Y)
+        ImGui.mouse.lastPosition = Vector2.new(mousePos.X, mousePos.Y)
+    end)
+    
+    -- Setup input handling with better reliability
     UserInputService.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             ImGui.mouse.leftPressed = true
@@ -149,15 +158,34 @@ function ImGui.Init(options)
         end
     end)
     
+    -- Update mouse position with better error handling
     UserInputService.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
-            ImGui.mouse.position = Vector2.new(input.Position.X, input.Position.Y)
+            -- Store last position before updating
+            ImGui.mouse.lastPosition = Vector2.new(ImGui.mouse.position.X, ImGui.mouse.position.Y)
+            
+            -- Use pcall to prevent errors if mouse position is temporarily unavailable
+            pcall(function()
+                local mousePos = input.Position
+                ImGui.mouse.position = Vector2.new(mousePos.X, mousePos.Y)
+            end)
         end
     end)
     
-    -- Main render loop
+    -- Limit render rate for better performance
+    local lastFrameTime = tick()
+    local frameRateLimit = 1/60  -- Limit to 60 FPS
+    
+    -- Main render loop with improved performance
     RunService.RenderStepped:Connect(function()
-        ImGui.NewFrame()
+        -- Throttle updates for better performance
+        local currentTime = tick()
+        local deltaTime = currentTime - lastFrameTime
+        
+        if deltaTime >= frameRateLimit then
+            lastFrameTime = currentTime
+            ImGui.NewFrame()
+        end
     end)
     
     -- Custom cursor is now optional (default: false)
@@ -180,9 +208,14 @@ function ImGui.Init(options)
         -- Update cursor position
         RunService.RenderStepped:Connect(function()
             if ImGui.cursor and ImGui.cursor.Parent then
-                ImGui.cursor.Position = UDim2.new(0, ImGui.mouse.position.X, 0, ImGui.mouse.position.Y)
+                pcall(function()
+                    ImGui.cursor.Position = UDim2.new(0, ImGui.mouse.position.X, 0, ImGui.mouse.position.Y)
+                end)
             end
         end)
+    else
+        -- Ensure system cursor is enabled if not using custom
+        UserInputService.MouseIconEnabled = true
     end
     
     return ImGui
@@ -208,24 +241,30 @@ function ImGui.NewFrame()
                                  ImGui.mouse.position.Y >= windowPos.Y.Offset and
                                  ImGui.mouse.position.Y <= windowPos.Y.Offset + windowSize.Y.Offset
             
-            -- Check if title bar is being dragged
+            -- Fix dragging logic - more reliable tracking
             if window.dragging and not ImGui.mouse.leftDown then
                 window.dragging = false
-            elseif window.dragging then
-                local newPos = UDim2.new(
-                    0, ImGui.mouse.position.X - window.dragOffset.X,
-                    0, ImGui.mouse.position.Y - window.dragOffset.Y
+            elseif window.dragging and ImGui.mouse.leftDown then
+                -- Use mouse movement delta for smoother dragging
+                local mouseDelta = Vector2.new(
+                    ImGui.mouse.position.X - ImGui.mouse.lastPosition.X,
+                    ImGui.mouse.position.Y - ImGui.mouse.lastPosition.Y
                 )
-                window.instance.Position = newPos
+                
+                -- Only move if there's actually movement (prevents jittering)
+                if math.abs(mouseDelta.X) > 0 or math.abs(mouseDelta.Y) > 0 then
+                    local currentPos = window.instance.Position
+                    local newPos = UDim2.new(
+                        0, currentPos.X.Offset + mouseDelta.X,
+                        0, currentPos.Y.Offset + mouseDelta.Y
+                    )
+                    window.instance.Position = newPos
+                end
             elseif ImGui.mouse.leftPressed and mouseInWindow then
                 -- Check if click is in title bar
-                local titleBarHeight = 30 -- Updated from 28 to match new titlebar height
+                local titleBarHeight = 30
                 if ImGui.mouse.position.Y < windowPos.Y.Offset + titleBarHeight then
                     window.dragging = true
-                    window.dragOffset = Vector2.new(
-                        ImGui.mouse.position.X - windowPos.X.Offset,
-                        ImGui.mouse.position.Y - windowPos.Y.Offset
-                    )
                     
                     -- Make this window active
                     if ImGui.activeWindow ~= window then
@@ -429,7 +468,7 @@ function ImGui.BringWindowToFront(window)
     end
     
     -- Set this window's ZIndex higher
-    window.instance.ZIndex = highestZIndex + 1
+    window.instance.ZIndex = highestZIndex + 10  -- Use bigger increment to avoid z-fighting
     
     -- List of classes that support ZIndex property
     local zIndexSupportedClasses = {
@@ -444,10 +483,12 @@ function ImGui.BringWindowToFront(window)
         ["ViewportFrame"] = true,
     }
     
-    -- Adjust child elements' ZIndex (only for element classes that support ZIndex)
+    -- Adjust child elements' ZIndex properly
+    local baseZIndex = window.instance.ZIndex
     for _, child in ipairs(window.instance:GetDescendants()) do
         if zIndexSupportedClasses[child.ClassName] then
-            child.ZIndex = child.ZIndex + highestZIndex
+            -- Set relative z-index to parent
+            child.ZIndex = baseZIndex + (child.ZIndex - 1)
         end
     end
 end
@@ -1171,8 +1212,8 @@ function ImGui.SameLine(offsetX)
 end
 
 -- Finalize the ImGui library
-ImGui.VERSION = "1.0.0"
-ImGui.LAST_UPDATED = "2023-07-28"
+ImGui.VERSION = "1.0.2"
+ImGui.LAST_UPDATED = "2023-12-20"
 
 -- Return the ImGui library object
 return ImGui
