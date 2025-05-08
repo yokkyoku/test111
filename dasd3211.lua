@@ -270,19 +270,30 @@ function ImGui.Begin(title, x, y, width, height)
             Parent = window.instance
         })
         
-        -- Add subtle shadow effect
+        -- Add subtle shadow effect - fixed to avoid ZIndex issues using a separate image
+        local shadowParent = createInstance("Frame", {
+            Name = "ShadowParent",
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            ZIndex = -1, -- This will ensure it's below other elements
+            Parent = window.instance
+        })
+        
         local shadow = createInstance("ImageLabel", {
             Name = "Shadow",
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
             Size = UDim2.new(1, 20, 1, 20),
-            Position = UDim2.new(0, -10, 0, -10),
             BackgroundTransparency = 1,
             Image = "rbxassetid://5554236805",
             ImageColor3 = Color3.fromRGB(0, 0, 0),
             ImageTransparency = 0.65,
             ScaleType = Enum.ScaleType.Slice,
             SliceCenter = Rect.new(23, 23, 277, 277),
-            ZIndex = -1,
-            Parent = window.instance
+            ZIndex = 0, -- A simple, fixed ZIndex to avoid issues
+            Parent = shadowParent
         })
         
         -- Create title bar with gradient
