@@ -629,7 +629,7 @@ end
                             local KeybindFrame = library:create("Frame", {
                                 Name = "KeybindFrame",
                                 BackgroundColor3 = Color3.fromRGB(10, 10, 10),
-                                BorderColor3 = Color3.fromRGB(255, 0, 0),
+                                BorderColor3 = Color3.fromRGB(30, 30, 30),
                                 Position = UDim2.new(1, 5, 0, 3),
                                 Size = UDim2.new(0, 55, 0, 75),
                                 Visible = false,
@@ -1942,7 +1942,7 @@ end
                         }, SliderButton)
 
                         local UIGradient = library:create("UIGradient", {
-                            Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(239, 79, 79)), ColorSequenceKeypoint.new(1, Color3.fromRGB(163, 56, 56))},
+                            Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(56, 67, 163))},
                             Rotation = 90,
                         }, SliderFrame)
 
