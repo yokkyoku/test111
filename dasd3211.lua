@@ -230,6 +230,7 @@ function library.new(library_title, cfg_location)
         Size = UDim2.new(0, 586, 0, 446),
     }, ImageLabel)
 
+
     local is_first_tab = true
     local selected_tab
     local tab_num = 1
@@ -878,11 +879,11 @@ function library.new(library_title, cfg_location)
                                 Rotation = 90,
                                 Color = ColorSequence.new {
                                     ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
-                                    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 0, 0)),
-                                    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 0, 0)),
-                                    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 0, 0)),
-                                    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(255, 0, 0)),
-                                    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 0)),
+                                    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 0, 255)),
+                                    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 0, 255)),
+                                    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
+                                    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 255, 0)),
+                                    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 255, 0)),
                                     ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0))
                                 }
                             }, HuePicker)
