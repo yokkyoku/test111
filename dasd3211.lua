@@ -30,16 +30,16 @@ local ImGui = {
         windowRounding = 4,
         frameRounding = 4,
         
-        -- Performance options - everything off by default to avoid lag
+        -- Moderate performance settings
         useGradients = false,
         useAnimations = false,
-        animationSpeed = 0.05,
+        animationSpeed = 0.1,
     },
     
     -- UI element IDs
     nextItemId = 0,
     
-    -- Font settings (fixed to use Enum.Font instead of Font.new)
+    -- Font settings
     font = {
         regular = Enum.Font.Ubuntu,
         bold = Enum.Font.SourceSansBold,
@@ -94,13 +94,12 @@ end
 function ImGui.Init(options)
     options = options or {}
     
-    -- Clear any existing windows first to prevent duplicates
+    -- Clean up previous instance if exists
     if ImGui.ScreenGui then
         ImGui.ScreenGui:Destroy()
-        ImGui.windows = {}
     end
     
-    -- Create parent ScreenGui with proper error handling
+    -- Create parent ScreenGui
     local screenGui
     
     local playerGui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
@@ -114,64 +113,56 @@ function ImGui.Init(options)
             Parent = playerGui
         })
     else
-        screenGui = createInstance("ScreenGui", {
-            Name = "ImGuiScreenGui",
-            ResetOnSpawn = false,
-            ZIndexBehavior = Enum.ZIndexBehavior.Global,
-            DisplayOrder = 999,
-            IgnoreGuiInset = true
-        })
-        
-        -- Try to place it safely
-        local success = pcall(function()
-            screenGui.Parent = CoreGui
+        pcall(function()
+            screenGui = createInstance("ScreenGui", {
+                Name = "ImGuiScreenGui",
+                ResetOnSpawn = false,
+                ZIndexBehavior = Enum.ZIndexBehavior.Global,
+                DisplayOrder = 999,
+                IgnoreGuiInset = true,
+                Parent = CoreGui
+            })
         end)
         
-        if not success then
-            screenGui.Parent = game:GetService("StarterGui")
+        if not screenGui then
+            screenGui = createInstance("ScreenGui", {
+                Name = "ImGuiScreenGui",
+                ResetOnSpawn = false,
+                ZIndexBehavior = Enum.ZIndexBehavior.Global,
+                DisplayOrder = 999,
+                IgnoreGuiInset = true,
+                Parent = game:GetService("StarterGui")
+            })
         end
     end
     
     ImGui.ScreenGui = screenGui
+    ImGui.windows = {}
     
-    -- Setup input handling - simple implementation to avoid performance issues
-    -- Disconnect previous connections if they exist
-    if ImGui.connections then
-        for _, connection in pairs(ImGui.connections) do
-            connection:Disconnect()
-        end
-    end
-    
-    ImGui.connections = {}
-    
-    -- Create new connections
-    table.insert(ImGui.connections, UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    -- Set up input handling
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             ImGui.mouse.leftPressed = true
             ImGui.mouse.leftDown = true
         end
-    end))
+    end)
     
-    table.insert(ImGui.connections, UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    UserInputService.InputEnded:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             ImGui.mouse.leftReleased = true
             ImGui.mouse.leftDown = false
         end
-    end))
+    end)
     
-    -- Only update mouse position on movement to reduce overhead
-    table.insert(ImGui.connections, UserInputService.InputChanged:Connect(function(input, gameProcessed)
+    UserInputService.InputChanged:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             ImGui.mouse.position = Vector2.new(input.Position.X, input.Position.Y)
         end
-    end))
+    end)
     
-    -- Debug mode option
-    ImGui.debugMode = options.debugMode or false
-    
-    -- Load config options
+    -- Apply style options if provided
     if options.style then
         for key, value in pairs(options.style) do
             ImGui.style[key] = value
@@ -181,7 +172,7 @@ function ImGui.Init(options)
     return ImGui
 end
 
--- Begin a new frame - no automatic rendering, just input processing
+-- Begin a new frame
 function ImGui.NewFrame()
     -- Reset frame state
     ImGui.hoveredItem = nil
@@ -205,8 +196,12 @@ function ImGui.NewFrame()
             if window.dragging and not ImGui.mouse.leftDown then
                 window.dragging = false
             elseif window.dragging then
-                -- Fix window dragging movement - direct change for performance
-                window.instance.Position = UDim2.new(0, ImGui.mouse.position.X - window.dragOffset.X, 0, ImGui.mouse.position.Y - window.dragOffset.Y)
+                -- Update window position
+                local newPos = UDim2.new(
+                    0, ImGui.mouse.position.X - window.dragOffset.X,
+                    0, ImGui.mouse.position.Y - window.dragOffset.Y
+                )
+                window.instance.Position = newPos
             elseif ImGui.mouse.leftPressed and mouseInWindow then
                 -- Check if click is in title bar
                 local titleBarHeight = 30
@@ -257,26 +252,31 @@ function ImGui.Begin(title, x, y, width, height)
             children = {}
         }
         
-        -- Create ultra-simplified window UI with minimal objects
+        -- Create window UI
         window.instance = createInstance("Frame", {
             Name = "ImGuiWindow_" .. title,
             Position = UDim2.new(0, window.position.X, 0, window.position.Y),
             Size = UDim2.new(0, window.size.X, 0, window.size.Y),
             BackgroundColor3 = ImGui.style.windowBgColor,
-            BorderSizePixel = 1,
-            BorderColor3 = ImGui.style.windowBorderColor,
+            BorderSizePixel = 0,
             Parent = ImGui.ScreenGui
         })
         
-        -- Add corner rounding only if needed
-        if ImGui.style.windowRounding > 0 then
-            createInstance("UICorner", {
-                CornerRadius = UDim.new(0, ImGui.style.windowRounding),
-                Parent = window.instance
-            })
-        end
+        -- Add corner rounding
+        createInstance("UICorner", {
+            CornerRadius = UDim.new(0, ImGui.style.windowRounding),
+            Parent = window.instance
+        })
         
-        -- Simple title bar without gradients or effects
+        -- Add border using UIStroke
+        createInstance("UIStroke", {
+            Color = ImGui.style.windowBorderColor,
+            Thickness = 1,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            Parent = window.instance
+        })
+        
+        -- Create title bar
         window.titleBar = createInstance("Frame", {
             Name = "TitleBar",
             Position = UDim2.new(0, 0, 0, 0),
@@ -286,21 +286,28 @@ function ImGui.Begin(title, x, y, width, height)
             Parent = window.instance
         })
         
-        -- Create title text with better spacing
-        window.titleText = createInstance("TextLabel", {
-            Name = "TitleText",
-            Position = UDim2.new(0, 10, 0, 0),
-            Size = UDim2.new(1, -20, 1, 0),
-            BackgroundTransparency = 1,
-            Text = title,
-            TextColor3 = ImGui.style.titleTextColor,
-            TextSize = ImGui.font.size + 2,
-            Font = ImGui.font.bold,
-            TextXAlignment = Enum.TextXAlignment.Left,
+        -- Add rounded top corners
+        createInstance("UICorner", {
+            CornerRadius = UDim.new(0, ImGui.style.windowRounding),
             Parent = window.titleBar
         })
         
-        -- Simplified close button without effects
+        -- Create title text
+        window.titleText = createInstance("TextLabel", {
+            Name = "TitleText",
+            Position = UDim2.new(0, 10, 0, 0),
+            Size = UDim2.new(1, -40, 1, 0),
+            BackgroundTransparency = 1,
+            Text = title,
+            TextColor3 = ImGui.style.titleTextColor,
+            TextSize = ImGui.font.size,
+            Font = ImGui.font.bold,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            Parent = window.titleBar
+        })
+        
+        -- Create close button
         window.closeButton = createInstance("TextButton", {
             Name = "CloseButton",
             Position = UDim2.new(1, -30, 0, 0),
@@ -313,7 +320,7 @@ function ImGui.Begin(title, x, y, width, height)
             Parent = window.titleBar
         })
         
-        -- Close button simple hover effect - no animations
+        -- Close button hover effect
         window.closeButton.MouseEnter:Connect(function()
             window.closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
         end)
@@ -335,7 +342,7 @@ function ImGui.Begin(title, x, y, width, height)
             end
         end)
         
-        -- Simple content frame without scrolling for better performance
+        -- Create content frame
         window.contentFrame = createInstance("Frame", {
             Name = "ContentFrame",
             Position = UDim2.new(0, ImGui.style.windowPadding.X, 0, 30 + ImGui.style.windowPadding.Y),
@@ -345,6 +352,7 @@ function ImGui.Begin(title, x, y, width, height)
             ),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
+            ClipsDescendants = true,  -- Important: clip content to frame bounds
             Parent = window.instance
         })
         
@@ -353,26 +361,31 @@ function ImGui.Begin(title, x, y, width, height)
         
         -- Add window to list
         table.insert(ImGui.windows, window)
+    else
+        -- Clear existing content for redraw
+        for _, child in ipairs(window.contentFrame:GetChildren()) do
+            child:Destroy()
+        end
+        
+        -- Reset content cursor
+        window.contentArea.cursor = Vector2.new(0, 0)
     end
     
     -- Make this window the active window
-    ImGui.BringWindowToFront(window)
     ImGui.activeWindow = window
     
     return true
 end
 
--- End a window definition
+-- End a window
 function ImGui.End()
     local window = ImGui.activeWindow
     if window then
-        -- No need to update canvas size since we're not using ScrollingFrame anymore
-        -- Just clear active window
         ImGui.activeWindow = nil
     end
 end
 
--- Simpler bring to front function that just sets ZIndex
+-- Bring a window to the front
 function ImGui.BringWindowToFront(window)
     -- Find the highest ZIndex among all windows
     local highestZIndex = 0
@@ -382,16 +395,25 @@ function ImGui.BringWindowToFront(window)
         end
     end
     
-    -- Set this window's ZIndex higher - only on main instances
+    -- Set this window's ZIndex higher
     window.instance.ZIndex = highestZIndex + 1
     
-    -- Basic descendant ZIndex adjustment to avoid most issues
-    if window.titleBar then
-        window.titleBar.ZIndex = highestZIndex + 2
-    end
+    -- Adjust child elements safely
+    local safeClasses = {
+        ["Frame"] = true,
+        ["ImageLabel"] = true,
+        ["ImageButton"] = true,
+        ["TextLabel"] = true,
+        ["TextButton"] = true,
+        ["TextBox"] = true,
+        ["ScrollingFrame"] = true,
+        ["CanvasGroup"] = true,
+    }
     
-    if window.contentFrame then
-        window.contentFrame.ZIndex = highestZIndex + 2
+    for _, child in ipairs(window.instance:GetDescendants()) do
+        if safeClasses[child.ClassName] then
+            child.ZIndex = child.ZIndex + highestZIndex
+        end
     end
 end
 
@@ -454,25 +476,16 @@ function ImGui.Button(label, width)
     local buttonWidth = width or textSize.X + ImGui.style.framePadding.X * 2
     local buttonHeight = textSize.Y + ImGui.style.framePadding.Y * 2
     
-    -- Create button container for animations
-    local container = createInstance("Frame", {
-        Name = "ButtonContainer_" .. label,
-        Size = UDim2.new(0, buttonWidth, 0, buttonHeight),
-        BackgroundTransparency = 1
-    })
-    
-    -- Create button element with improved styling
+    -- Create button
     local button = createInstance("TextButton", {
         Name = "ImGuiButton_" .. label,
-        Position = UDim2.new(0, 0, 0, 0),
-        Size = UDim2.new(1, 0, 1, 0),
+        Size = UDim2.new(0, buttonWidth, 0, buttonHeight),
         BackgroundColor3 = ImGui.style.buttonColor,
-        BorderSizePixel = 0, -- No border, using UICorner instead
+        BorderSizePixel = 0,
         Text = label,
         TextColor3 = ImGui.style.textColor,
         TextSize = ImGui.font.size,
-        Font = ImGui.font.regular,
-        Parent = container
+        Font = ImGui.font.regular
     })
     
     -- Add rounded corners
@@ -481,27 +494,7 @@ function ImGui.Button(label, width)
         Parent = button
     })
     
-    -- Add subtle gradient only if enabled for performance
-    if ImGui.style.useGradients then
-        createInstance("UIGradient", {
-            Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0),
-                NumberSequenceKeypoint.new(1, 0.1)
-            }),
-            Rotation = 90,
-            Parent = button
-        })
-    end
-    
-    -- Add subtle stroke
-    createInstance("UIStroke", {
-        Color = ImGui.style.borderColor,
-        Thickness = 1,
-        Transparency = 0.5,
-        Parent = button
-    })
-    
-    local position = ImGui.AddItem(container, buttonWidth, buttonHeight)
+    local position = ImGui.AddItem(button, buttonWidth, buttonHeight)
     
     -- Check for interactions
     local isHovered = ImGui.mouse.position.X >= button.AbsolutePosition.X and
@@ -512,46 +505,14 @@ function ImGui.Button(label, width)
     if isHovered then
         ImGui.hoveredItem = buttonId
         button.BackgroundColor3 = ImGui.style.buttonHoverColor
-        
-        -- Apply hover animation only if animations are enabled
-        if ImGui.style.useAnimations then
-            TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
-                BackgroundColor3 = ImGui.style.buttonHoverColor
-            }):Play()
-        end
     else
-        -- Set color directly if animations disabled
-        if not ImGui.style.useAnimations then
-            button.BackgroundColor3 = ImGui.style.buttonColor
-        else
-            -- Reset color if not hovered with animation
-            TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
-                BackgroundColor3 = ImGui.style.buttonColor
-            }):Play()
-        end
+        button.BackgroundColor3 = ImGui.style.buttonColor
     end
     
     local isClicked = isHovered and ImGui.mouse.leftPressed
     if isClicked then
         ImGui.activeItem = buttonId
         button.BackgroundColor3 = ImGui.style.buttonActiveColor
-        
-        -- Add click animation only if enabled
-        if ImGui.style.useAnimations then
-            TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
-                BackgroundColor3 = ImGui.style.buttonActiveColor,
-                Size = UDim2.new(0.98, 0, 0.98, 0),
-                Position = UDim2.new(0.01, 0, 0.01, 0)
-            }):Play()
-            
-            -- Reset after animation
-            task.delay(ImGui.style.animationSpeed + 0.05, function()
-                TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
-                    Size = UDim2.new(1, 0, 1, 0),
-                    Position = UDim2.new(0, 0, 0, 0)
-                }):Play()
-            end)
-        end
     end
     
     return isClicked
