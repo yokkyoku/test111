@@ -629,13 +629,6 @@ function ImGui.Button(label, width)
     ImGui.nextItemId = ImGui.nextItemId + 1
     local buttonId = "Button_" .. label .. "_" .. ImGui.nextItemId
     
-    -- Check if this button was clicked in the previous frame
-    local wasClicked = ImGui.lastClickedElements[buttonId] == true
-    if wasClicked then
-        -- Remove from last clicked list so it's only processed once
-        ImGui.lastClickedElements[buttonId] = nil
-    end
-    
     -- Calculate size
     local textSize = calculateTextSize(label, ImGui.font.size, ImGui.font.regular)
     local buttonWidth = width or textSize.X + ImGui.style.framePadding.X * 2
@@ -680,9 +673,12 @@ function ImGui.Button(label, width)
     -- Add the button to the window
     local position = ImGui.AddItem(container, buttonWidth, buttonHeight)
     
-    -- Register click handler to store in state for next frame
+    -- Use direct click detection instead of frame-to-frame state
+    local wasClicked = false
+    
+    -- Register direct click handler
     ImGui.Connect(button, "MouseButton1Click", function()
-        ImGui.clickedElements[buttonId] = true
+        wasClicked = true
     end)
     
     return wasClicked
@@ -697,14 +693,8 @@ function ImGui.Checkbox(label, value)
     ImGui.nextItemId = ImGui.nextItemId + 1
     local checkboxId = "Checkbox_" .. label .. "_" .. ImGui.nextItemId
     
-    -- Check if this checkbox was clicked in the previous frame
-    local wasClicked = ImGui.lastClickedElements[checkboxId] == true
-    if wasClicked then
-        -- Remove from last clicked list so it's only processed once
-        ImGui.lastClickedElements[checkboxId] = nil
-        -- Toggle the value
-        value = not value
-    end
+    -- Track if checkbox was clicked in this frame
+    local wasClicked = false
     
     -- Calculate sizes
     local textSize = calculateTextSize(label, ImGui.font.size, ImGui.font.regular)
@@ -784,9 +774,43 @@ function ImGui.Checkbox(label, value)
     
     local position = ImGui.AddItem(container, totalWidth, totalHeight)
     
-    -- Register click handler
+    -- Register direct click handler that toggles the value immediately
     ImGui.Connect(clickArea, "MouseButton1Click", function()
-        ImGui.clickedElements[checkboxId] = true
+        value = not value
+        wasClicked = true
+        
+        -- Update visual immediately
+        box.BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonColor
+        
+        -- Update checkmark
+        box:ClearAllChildren()
+        
+        -- Re-add corners
+        createInstance("UICorner", {
+            CornerRadius = UDim.new(0, 4),
+            Parent = box
+        })
+        
+        -- Re-add stroke
+        createInstance("UIStroke", {
+            Color = ImGui.style.borderColor,
+            Thickness = 1,
+            Transparency = 0.5,
+            Parent = box
+        })
+        
+        if value then
+            local checkmark = createInstance("ImageLabel", {
+                Name = "Checkmark",
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.new(0.5, 0, 0.5, 0),
+                Size = UDim2.new(0, 12, 0, 12),
+                BackgroundTransparency = 1,
+                Image = "rbxassetid://6031094667", -- Checkmark icon
+                ImageColor3 = Color3.fromRGB(255, 255, 255),
+                Parent = box
+            })
+        end
     end)
     
     -- Hover effects
@@ -948,31 +972,14 @@ function ImGui.Slider(label, value, min, max, format)
     
     local position = ImGui.AddItem(container, totalWidth, totalHeight)
     
-    -- Check if this slider is being dragged
-    if ImGui.activeDragSlider == sliderId then
-        -- Use current mouse position to update slider
-        local percent = math.clamp(
-            (ImGui.mouse.position.X - track.AbsolutePosition.X) / sliderWidth,
-            0, 1
-        )
-        
-        -- Update value based on percentage
-        value = min + percent * (max - min)
-        
-        -- Update fill width and handle position
-        fillWidth = percent * sliderWidth
-        fill.Size = UDim2.new(0, fillWidth, 1, 0)
-        handle.Position = UDim2.new(0, fillWidth - 6, 0, -4)
-        
-        -- Update value label
-        valueLabel.Text = string.format(format, value)
-    end
+    -- Variable to track if slider is currently being dragged in this frame
+    local isDraggingInThisFrame = false
     
     -- Function to update slider value based on mouse position
     local function updateSliderValue(mousePos)
         -- Calculate percentage
         local percent = math.clamp(
-            (mousePos.X - track.AbsolutePosition.X) / sliderWidth,
+            (mousePos.X - track.AbsolutePosition.X) / track.AbsoluteSize.X,
             0, 1
         )
         
@@ -980,24 +987,31 @@ function ImGui.Slider(label, value, min, max, format)
         value = min + percent * (max - min)
         
         -- Update UI
-        fillWidth = percent * sliderWidth
-        fill.Size = UDim2.new(0, fillWidth, 1, 0)
-        handle.Position = UDim2.new(0, fillWidth - 6, 0, -4)
+        local newFillWidth = percent * sliderWidth
+        fill.Size = UDim2.new(0, newFillWidth, 1, 0)
+        handle.Position = UDim2.new(0, newFillWidth - 6, 0, -4)
         valueLabel.Text = string.format(format, value)
     end
     
     -- Track click handler (immediate jump to clicked position)
     ImGui.Connect(trackClickArea, "MouseButton1Down", function(x, y)
         ImGui.activeDragSlider = sliderId
+        isDraggingInThisFrame = true
         updateSliderValue(Vector2.new(x, y))
         handle.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
     end)
     
-    -- Handle drag
+    -- Handle drag start
     ImGui.Connect(handleButton, "MouseButton1Down", function()
         ImGui.activeDragSlider = sliderId
+        isDraggingInThisFrame = true
         handle.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
     end)
+    
+    -- Update on mouse move if we're dragging this slider
+    if ImGui.activeDragSlider == sliderId and ImGui.mouse.leftDown then
+        updateSliderValue(ImGui.mouse.position)
+    end
     
     -- Handle hover effect
     ImGui.Connect(handleButton, "MouseEnter", function()
