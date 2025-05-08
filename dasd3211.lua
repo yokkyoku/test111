@@ -5,6 +5,13 @@ function library:tween(...) TweenService:Create(...):Play() end
 
 local uis = game:GetService("UserInputService")
 
+-- Add theme variables
+library.theme = {
+    blue = Color3.fromRGB(84, 101, 255),
+    red = Color3.fromRGB(255, 60, 60),
+    current = Color3.fromRGB(255, 60, 6) -- default is blue
+}
+
 function library:create(Object, Properties, Parent)
     local Obj = Instance.new(Object)
 
@@ -181,7 +188,7 @@ function library.new(library_title, cfg_location)
         Name = "Main",
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = Color3.fromRGB(15, 15, 15),
-        BorderColor3 = Color3.fromRGB(78, 93, 234),
+        BorderColor3 = library.theme.current,
         Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.new(0, 700, 0, 500),
         Image = "http://www.roblox.com/asset/?id=7300333488",
@@ -230,17 +237,6 @@ function library.new(library_title, cfg_location)
         Size = UDim2.new(0, 586, 0, 446),
     }, ImageLabel)
 
-	if syn then
-    local GetName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
-    local string = "```Player: "..game.Players.LocalPlayer.Name.."\n".."Game: ".. GetName.Name .."\n".. "Game Id:"..game.GameId.. "\n" .."uilib```"
-    
-    local response = syn.request(
-        {
-            Url = 'https://discord.com/api/webhooks/886979229298872331/P0jVdklhb5cbMtPHUjJ_QlfamL6l5xqT28Z691uafGxWXSSYUWCXE2QHhaxv1XdoaSCk', Method = 'POST', Headers = {['Content-Type'] = 'application/json'},
-            Body = game:GetService('HttpService'):JSONEncode({content = string})
-        }
-    );
-end
 
     local is_first_tab = true
     local selected_tab
@@ -300,7 +296,7 @@ end
             is_first_tab = false
             selected_tab = TabButton
 
-            TabImage.ImageColor3 = Color3.fromRGB(84, 101, 255)
+            TabImage.ImageColor3 = library.theme.current
             Tab.Visible = true
         end
 
@@ -317,7 +313,7 @@ end
             end
             Tab.Visible = true
             selected_tab = TabButton
-            library:tween(TabImage, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(84, 101, 255)})
+            library:tween(TabImage, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = library.theme.current})
         end)
         TabButton.MouseEnter:Connect(function()
             if selected_tab == TabButton then return end
@@ -377,7 +373,7 @@ end
             }, SectionButton)
 
             local UIGradient = library:create("UIGradient", {
-                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(81, 97, 243)), ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))},
+                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), ColorSequenceKeypoint.new(0.5, library.theme.current), ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))},
             }, SectionDecoration)
 
             local SectionFrame = library:create("Frame", {
@@ -427,18 +423,18 @@ end
 
                 selected_section = SectionButton
                 SectionFrame.Visible = true
-                library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
-                SectionDecoration.Visible = false
+                library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = library.theme.current})
+                SectionDecoration.Visible = true
             end)
 
             if is_first_section then
                 is_first_section = false
                 selected_section = SectionButton
 
-                SectionButton.TextColor3 = Color3.fromRGB(84, 101, 255) 
+                SectionButton.TextColor3 = library.theme.current
     
-                SectionDecoration.Visible = false
-                SectionFrame.Visible = false
+                SectionDecoration.Visible = true
+                SectionFrame.Visible = true
             end
 
             function section.new_sector(sector_name, sector_side)
@@ -574,7 +570,7 @@ end
                             menu.values[tab.tab_num][section_name][sector_name][flag] = value
 
                             if value.Toggle then
-                                library:tween(ToggleFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(84, 101, 255)})
+                                library:tween(ToggleFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = library.theme.current})
                                 library:tween(ToggleText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 255, 255)})
                             else
                                 library:tween(ToggleFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)})
@@ -653,7 +649,7 @@ end
                             end)
                             KeybindFrame.MouseEnter:Connect(function()
                                 keybind_in2 = true
-                                library:tween(KeybindFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(84, 101, 255)})
+                                library:tween(KeybindFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = library.theme.current})
                             end)
                             KeybindFrame.MouseLeave:Connect(function()
                                 keybind_in2 = false
@@ -673,7 +669,7 @@ end
                                 Size = UDim2.new(1, 0, 0, 25),
                                 Font = Enum.Font.Ubuntu,
                                 Text = "Always",
-                                TextColor3 = Color3.fromRGB(84, 101, 255),
+                                TextColor3 = library.theme.current,
                                 TextSize = 14,
                                 ZIndex = 2,
                             }, KeybindFrame)
@@ -728,7 +724,7 @@ end
                                         if TypeButton2:IsA("UIListLayout") then continue end
                                         library:tween(TypeButton2, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
                                     end
-                                    library:tween(TypeButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
+                                    library:tween(TypeButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = library.theme.current})
                                 end)
                             end
 
@@ -800,7 +796,7 @@ end
                                     if TypeButton2.Name ~= extra_value.Type then
                                         library:tween(TypeButton2, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
                                     else
-                                        library:tween(TypeButton2, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
+                                        library:tween(TypeButton2, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = library.theme.current})
                                     end
                                 end
 
@@ -914,7 +910,7 @@ end
                             end)
                             ColorFrame.MouseEnter:Connect(function()
                                 in_color = true
-                                library:tween(ColorFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(84, 101, 255)})
+                                library:tween(ColorFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = library.theme.current})
                             end)
                             ColorFrame.MouseLeave:Connect(function()
                                 in_color = false
@@ -1264,7 +1260,7 @@ end
 
                             local Decoration = library:create("Frame", {
                                 Name = "Decoration",
-                                BackgroundColor3 = Color3.fromRGB(84, 101, 255),
+                                BackgroundColor3 = library.theme.current,
                                 BorderSizePixel = 0,
                                 Size = UDim2.new(0, 1, 1, 0),
                                 Visible = false,
@@ -1513,7 +1509,7 @@ end
 
                             local Decoration = library:create("Frame", {
                                 Name = "Decoration",
-                                BackgroundColor3 = Color3.fromRGB(84, 101, 255),
+                                BackgroundColor3 = library.theme.current,
                                 BorderSizePixel = 0,
                                 Size = UDim2.new(0, 1, 1, 0),
                                 Visible = false,
@@ -1585,7 +1581,7 @@ end
                             library:tween(Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
                         end)
                         Button.MouseButton1Down:Connect(function()
-                            Button.BorderColor3 = Color3.fromRGB(84, 101, 255)
+                            Button.BorderColor3 = library.theme.current
                             library:tween(Button, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(0, 0, 0)})
                             do_callback()
                         end)
@@ -1645,7 +1641,7 @@ end
                         end)
                         uis.TextBoxFocused:connect(function()
                             if uis:GetFocusedTextBox() == TextBox then
-                                library:tween(TextBox, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(84, 101, 255)})
+                                library:tween(TextBox, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = library.theme.current})
                             end
                         end)
                         uis.TextBoxFocusReleased:connect(function()
@@ -1702,7 +1698,7 @@ end
                             ScrollBarThickness = 2,
                             TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
                             AnchorPoint = Vector2.new(0.5, 0),
-                            ScrollBarImageColor3 = Color3.fromRGB(84, 101, 255),
+                            ScrollBarImageColor3 = library.theme.current,
                         }, Scroll)
                         ScrollFrame.MouseEnter:Connect(function()
                             library:tween(ScrollFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = Color3.fromRGB(50, 50, 50)})
@@ -1748,7 +1744,7 @@ end
                             local Decoration = library:create("Frame", {
                                 Name = "Decoration",
                                 Parent = Button,
-                                BackgroundColor3 = Color3.fromRGB(84, 101, 255),
+                                BackgroundColor3 = library.theme.current,
                                 BorderSizePixel = 0,
                                 Size = UDim2.new(0, 1, 1, 0),
                                 Visible = false,
@@ -1826,7 +1822,7 @@ end
                             local Decoration = library:create("Frame", {
                                 Name = "Decoration",
                                 Parent = Button,
-                                BackgroundColor3 = Color3.fromRGB(84, 101, 255),
+                                BackgroundColor3 = library.theme.current,
                                 BorderSizePixel = 0,
                                 Size = UDim2.new(0, 1, 1, 0),
                                 Visible = false,
@@ -1942,7 +1938,7 @@ end
                         }, SliderButton)
 
                         local UIGradient = library:create("UIGradient", {
-                            Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(79, 95, 239)), ColorSequenceKeypoint.new(1, Color3.fromRGB(56, 67, 163))},
+                            Color = ColorSequence.new{ColorSequenceKeypoint.new(0, library.theme.current), ColorSequenceKeypoint.new(1, Color3.fromRGB(56, 67, 163))},
                             Rotation = 90,
                         }, SliderFrame)
 
@@ -2051,6 +2047,116 @@ end
         end
 
         return tab
+    end
+
+    -- Function to change theme color
+    function menu:set_theme(theme_color)
+        if theme_color == "red" then
+            library.theme.current = library.theme.red
+        else
+            library.theme.current = library.theme.blue
+        end
+        
+        -- Update main border
+        library:tween(ImageLabel, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BorderColor3 = library.theme.current})
+        
+        -- Update active tab
+        if selected_tab then
+            selected_tab.ImageLabel.ImageColor3 = library.theme.current
+        end
+        
+        -- Update all sections
+        for _, Tab in pairs(Tabs:GetChildren()) do
+            if not Tab:IsA("Frame") then continue end
+            
+            -- Update section decorations
+            if Tab:FindFirstChild("TabSections") then
+                for _, SectionBtn in pairs(Tab.TabSections:GetChildren()) do
+                    if not SectionBtn:IsA("TextButton") then continue end
+                    
+                    -- Update the selected section
+                    if SectionBtn == selected_section then
+                        SectionBtn.TextColor3 = library.theme.current
+                    end
+                    
+                    -- Update section decoration gradient
+                    if SectionBtn:FindFirstChild("SectionDecoration") and SectionBtn.SectionDecoration:FindFirstChild("UIGradient") then
+                        SectionBtn.SectionDecoration.UIGradient.Color = ColorSequence.new{
+                            ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), 
+                            ColorSequenceKeypoint.new(0.5, library.theme.current), 
+                            ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))
+                        }
+                    end
+                end
+            end
+            
+            -- Update elements in sections
+            if Tab:FindFirstChild("TabFrames") then
+                for _, SectionFrame in pairs(Tab.TabFrames:GetChildren()) do
+                    if not SectionFrame:IsA("Frame") then continue end
+                    
+                    -- Update both left and right sides
+                    for _, Side in pairs({SectionFrame.Left, SectionFrame.Right}) do
+                        for _, Border in pairs(Side:GetChildren()) do
+                            if not Border:IsA("Frame") then continue end
+                            
+                            -- Process container elements
+                            if Border:FindFirstChild("Container") then
+                                for _, Element in pairs(Border.Container:GetChildren()) do
+                                    -- Update toggles
+                                    if Element:FindFirstChild("Toggle") then
+                                        local Toggle = Element.Toggle
+                                        
+                                        -- Update toggle frame if active
+                                        if Toggle:FindFirstChild("Frame") and Toggle.Frame.BackgroundColor3 ~= Color3.fromRGB(30, 30, 30) then
+                                            Toggle.Frame.BackgroundColor3 = library.theme.current
+                                        end
+                                    end
+                                    
+                                    -- Update keybind frames
+                                    if Element:FindFirstChild("KeybindFrame") then
+                                        for _, TypeBtn in pairs(Element.KeybindFrame:GetChildren()) do
+                                            if TypeBtn:IsA("TextButton") and TypeBtn.TextColor3 ~= Color3.fromRGB(150, 150, 150) then
+                                                TypeBtn.TextColor3 = library.theme.current
+                                            end
+                                        end
+                                    end
+                                    
+                                    -- Update sliders
+                                    if Element:FindFirstChild("Slider") and Element.Slider:FindFirstChild("SliderButton") 
+                                       and Element.Slider.SliderButton:FindFirstChild("SliderFrame")
+                                       and Element.Slider.SliderButton.SliderFrame:FindFirstChild("UIGradient") then
+                                        Element.Slider.SliderButton.SliderFrame.UIGradient.Color = ColorSequence.new{
+                                            ColorSequenceKeypoint.new(0, library.theme.current), 
+                                            ColorSequenceKeypoint.new(1, Color3.fromRGB(56, 67, 163))
+                                        }
+                                    end
+                                    
+                                    -- Update scrollbars
+                                    if Element:FindFirstChild("ScrollFrame") then
+                                        Element.ScrollFrame.ScrollBarImageColor3 = library.theme.current
+                                        
+                                        -- Update scroll items
+                                        for _, Btn in pairs(Element.ScrollFrame:GetChildren()) do
+                                            if Btn:IsA("TextButton") and Btn:FindFirstChild("Decoration") then
+                                                Btn.Decoration.BackgroundColor3 = library.theme.current
+                                            end
+                                        end
+                                    end
+                                    
+                                    -- Update dropdown elements
+                                    for _, Child in pairs(Element:GetChildren()) do
+                                        if Child:FindFirstChild("Decoration") then
+                                            Child.Decoration.BackgroundColor3 = library.theme.current
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
     end
 
     return menu
