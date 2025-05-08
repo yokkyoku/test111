@@ -1535,7 +1535,7 @@ function library.new(library_title, cfg_location)
         end
     end
 
-    return menu
+    return tab
 end 
 
 return library 
