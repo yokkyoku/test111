@@ -355,6 +355,15 @@ function library.new(library_title, cfg_location)
                 library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(100, 100, 100)})
             end)
 
+            local SectionDecoration = library:create("Frame", {
+                Name = "SectionDecoration",
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                BorderSizePixel = 0,
+                Position = UDim2.new(0, 0, 0, 27),
+                Size = UDim2.new(1, 0, 0, 1),
+                Visible = false,
+            }, SectionButton)
+
             local UIGradient = library:create("UIGradient", {
                 Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(81, 97, 243)), ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))},
             }, SectionDecoration)
@@ -865,18 +874,6 @@ function library.new(library_title, cfg_location)
                                 Text = "",
                             }, ColorFrame)
 
-                            local UIGradient = library:create("UIGradient", {
-                                Rotation = 90,
-                                Color = ColorSequence.new {
-                                    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
-                                    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 0, 255)),
-                                    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 0, 255)),
-                                    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
-                                    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 255, 0)),
-                                    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 255, 0)),
-                                    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0))
-                                }
-                            }, HuePicker)
 
                             local HuePick = library:create("ImageButton", {
                                 Name = "HuePick",
