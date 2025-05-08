@@ -1,6 +1,6 @@
 -- RobloxImGui: Compact ImGui-style UI library
 local ImGui = {
-    _VERSION = "1.0.2",
+    _VERSION = "1.0.3",
     _AUTHOR = "Claude",
     
     -- State variables
@@ -54,7 +54,14 @@ local ImGui = {
         leftPressed = false,
         leftReleased = false,
         leftDown = false
-    }
+    },
+    
+    -- Cache for hit testing (optimization)
+    hitTestCache = {},
+    
+    -- Click tracking
+    clickedButtons = {},
+    clickedCheckboxes = {}
 }
 
 -- Services
@@ -547,6 +554,13 @@ function ImGui.Button(label, width)
     ImGui.nextItemId = ImGui.nextItemId + 1
     local buttonId = "Button_" .. label .. "_" .. ImGui.nextItemId
     
+    -- Check if this button was clicked in the previous frame
+    local wasClicked = ImGui.clickedButtons[buttonId] == true
+    -- Clear the click state so it doesn't trigger again
+    if wasClicked then
+        ImGui.clickedButtons[buttonId] = nil
+    end
+    
     -- Calculate size
     local textSize = calculateTextSize(label, ImGui.font.size, ImGui.font.regular)
     local buttonWidth = width or textSize.X + ImGui.style.framePadding.X * 2
@@ -559,7 +573,7 @@ function ImGui.Button(label, width)
         BackgroundTransparency = 1
     })
     
-    -- Create button element with improved styling
+    -- Create button element with improved styling and direct click handling
     local button = createInstance("TextButton", {
         Name = "ImGuiButton_" .. label,
         Position = UDim2.new(0, 0, 0, 0),
@@ -570,6 +584,7 @@ function ImGui.Button(label, width)
         TextColor3 = ImGui.style.textColor,
         TextSize = ImGui.font.size,
         Font = ImGui.font.regular,
+        AutoButtonColor = false, -- We handle coloring manually
         Parent = container
     })
     
@@ -601,58 +616,54 @@ function ImGui.Button(label, width)
     
     local position = ImGui.AddItem(container, buttonWidth, buttonHeight)
     
-    -- Check for interactions
-    local isHovered = ImGui.mouse.position.X >= button.AbsolutePosition.X and
-                     ImGui.mouse.position.X <= button.AbsolutePosition.X + buttonWidth and
-                     ImGui.mouse.position.Y >= button.AbsolutePosition.Y and
-                     ImGui.mouse.position.Y <= button.AbsolutePosition.Y + buttonHeight
-    
-    if isHovered then
-        ImGui.hoveredItem = buttonId
-        button.BackgroundColor3 = ImGui.style.buttonHoverColor
+    -- Register click handler - store in global clickedButtons table
+    button.MouseButton1Click:Connect(function()
+        ImGui.clickedButtons[buttonId] = true
         
-        -- Apply hover animation only if animations are enabled
-        if ImGui.style.useAnimations then
-            TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
-                BackgroundColor3 = ImGui.style.buttonHoverColor
-            }):Play()
-        end
-    else
-        -- Set color directly if animations disabled
-        if not ImGui.style.useAnimations then
-            button.BackgroundColor3 = ImGui.style.buttonColor
-        else
-            -- Reset color if not hovered with animation
-            TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
-                BackgroundColor3 = ImGui.style.buttonColor
-            }):Play()
-        end
-    end
-    
-    local isClicked = isHovered and ImGui.mouse.leftPressed
-    if isClicked then
-        ImGui.activeItem = buttonId
+        -- Visual feedback
         button.BackgroundColor3 = ImGui.style.buttonActiveColor
         
-        -- Add click animation only if enabled
+        -- Add click effect
         if ImGui.style.useAnimations then
-            TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
-                BackgroundColor3 = ImGui.style.buttonActiveColor,
-                Size = UDim2.new(0.98, 0, 0.98, 0),
-                Position = UDim2.new(0.01, 0, 0.01, 0)
-            }):Play()
-            
-            -- Reset after animation
-            task.delay(ImGui.style.animationSpeed + 0.05, function()
-                TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
-                    Size = UDim2.new(1, 0, 1, 0),
-                    Position = UDim2.new(0, 0, 0, 0)
-                }):Play()
-            end)
+            button:TweenSize(
+                UDim2.new(0.95, 0, 0.95, 0), 
+                Enum.EasingDirection.Out,
+                Enum.EasingStyle.Quad,
+                0.1, -- Use fixed fast animation time for better responsiveness
+                true,
+                function()
+                    button:TweenSize(
+                        UDim2.new(1, 0, 1, 0),
+                        Enum.EasingDirection.Out,
+                        Enum.EasingStyle.Quad,
+                        0.1
+                    )
+                end
+            )
         end
-    end
+        
+        -- Reset color after a short delay
+        task.delay(0.15, function()
+            if button and button.Parent then
+                button.BackgroundColor3 = ImGui.style.buttonColor
+            end
+        end)
+    end)
     
-    return isClicked
+    -- Hover effects
+    button.MouseEnter:Connect(function()
+        if button and button.Parent then
+            button.BackgroundColor3 = ImGui.style.buttonHoverColor
+        end
+    end)
+    
+    button.MouseLeave:Connect(function()
+        if button and button.Parent then
+            button.BackgroundColor3 = ImGui.style.buttonColor
+        end
+    end)
+    
+    return wasClicked
 end
 
 -- Checkbox control
@@ -663,6 +674,15 @@ function ImGui.Checkbox(label, value)
     -- Generate unique ID for this checkbox
     ImGui.nextItemId = ImGui.nextItemId + 1
     local checkboxId = "Checkbox_" .. label .. "_" .. ImGui.nextItemId
+    
+    -- Check if this checkbox was clicked in the previous frame
+    local wasClicked = ImGui.clickedCheckboxes[checkboxId] == true
+    -- Clear the click state so it doesn't trigger again
+    if wasClicked then
+        ImGui.clickedCheckboxes[checkboxId] = nil
+        -- Toggle the value
+        value = not value
+    end
     
     -- Calculate sizes
     local textSize = calculateTextSize(label, ImGui.font.size, ImGui.font.regular)
@@ -675,6 +695,15 @@ function ImGui.Checkbox(label, value)
         Name = "ImGuiCheckbox_" .. label,
         Size = UDim2.new(0, totalWidth, 0, totalHeight),
         BackgroundTransparency = 1
+    })
+    
+    -- Create clickable area (invisible button)
+    local clickArea = createInstance("TextButton", {
+        Name = "CheckboxClickArea",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        Parent = container
     })
     
     -- Create checkbox box with modern style
@@ -693,15 +722,17 @@ function ImGui.Checkbox(label, value)
         Parent = box
     })
     
-    -- Add gradient
-    createInstance("UIGradient", {
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0),
-            NumberSequenceKeypoint.new(1, 0.1)
-        }),
-        Rotation = 90,
-        Parent = box
-    })
+    -- Add gradient if enabled
+    if ImGui.style.useGradients then
+        createInstance("UIGradient", {
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0),
+                NumberSequenceKeypoint.new(1, 0.1)
+            }),
+            Rotation = 90,
+            Parent = box
+        })
+    end
     
     -- Add subtle stroke
     createInstance("UIStroke", {
@@ -711,9 +742,9 @@ function ImGui.Checkbox(label, value)
         Parent = box
     })
     
-    -- Create checkmark if checked with nicer animation
+    -- Create checkmark if checked
     if value then
-        -- Use a nicer checkmark icon
+        -- Use a checkmark icon
         local checkmark = createInstance("ImageLabel", {
             Name = "Checkmark",
             AnchorPoint = Vector2.new(0.5, 0.5),
@@ -724,12 +755,6 @@ function ImGui.Checkbox(label, value)
             ImageColor3 = Color3.fromRGB(255, 255, 255),
             Parent = box
         })
-        
-        -- Add appear animation
-        checkmark.Size = UDim2.new(0, 0, 0, 0)
-        TweenService:Create(checkmark, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 12, 0, 12)
-        }):Play()
     end
     
     -- Create label text
@@ -749,74 +774,69 @@ function ImGui.Checkbox(label, value)
     
     local position = ImGui.AddItem(container, totalWidth, totalHeight)
     
-    -- Check for interactions
-    local isHovered = ImGui.mouse.position.X >= container.AbsolutePosition.X and
-                     ImGui.mouse.position.X <= container.AbsolutePosition.X + totalWidth and
-                     ImGui.mouse.position.Y >= container.AbsolutePosition.Y and
-                     ImGui.mouse.position.Y <= container.AbsolutePosition.Y + totalHeight
-    
-    if isHovered then
-        ImGui.hoveredItem = checkboxId
-        -- Animate hover effect
-        TweenService:Create(box, TweenInfo.new(0.1), {
-            BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonHoverColor
-        }):Play()
-    else
-        -- Reset color
-        TweenService:Create(box, TweenInfo.new(0.1), {
-            BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonColor
-        }):Play()
-    end
-    
-    local isClicked = isHovered and ImGui.mouse.leftPressed
-    if isClicked then
-        ImGui.activeItem = checkboxId
-        value = not value
+    -- Register click handler
+    clickArea.MouseButton1Click:Connect(function()
+        ImGui.clickedCheckboxes[checkboxId] = true
         
-        -- Animate click
-        TweenService:Create(box, TweenInfo.new(0.1), {
-            BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonColor,
-            Size = UDim2.new(0, checkboxSize * 0.8, 0, checkboxSize * 0.8)
-        }):Play()
+        -- Visual feedback
+        box.BackgroundColor3 = value and ImGui.style.buttonColor or ImGui.style.checkboxColor
         
-        task.delay(0.1, function()
-            TweenService:Create(box, TweenInfo.new(0.1), {
-                Size = UDim2.new(0, checkboxSize, 0, checkboxSize)
-            }):Play()
-        end)
+        -- Add animation for clear feedback
+        if ImGui.style.useAnimations then
+            box:TweenSize(
+                UDim2.new(0, checkboxSize * 0.8, 0, checkboxSize * 0.8),
+                Enum.EasingDirection.Out,
+                Enum.EasingStyle.Quad,
+                0.1,
+                true,
+                function()
+                    box:TweenSize(
+                        UDim2.new(0, checkboxSize, 0, checkboxSize),
+                        Enum.EasingDirection.Out,
+                        Enum.EasingStyle.Quad,
+                        0.1
+                    )
+                end
+            )
+        end
         
-        -- Update checkmark with animation
-        if value then
+        -- Handle checkmark appearance or removal immediately for visual feedback
+        local newValue = not value
+        
+        -- Remove existing checkmarks
+        for _, child in ipairs(box:GetChildren()) do
+            if child.Name == "Checkmark" then
+                child:Destroy()
+            end
+        end
+        
+        -- Add new checkmark if needed
+        if newValue then
             local checkmark = createInstance("ImageLabel", {
                 Name = "Checkmark",
                 AnchorPoint = Vector2.new(0.5, 0.5),
                 Position = UDim2.new(0.5, 0, 0.5, 0),
-                Size = UDim2.new(0, 0, 0, 0),
+                Size = UDim2.new(0, 12, 0, 12),
                 BackgroundTransparency = 1,
                 Image = "rbxassetid://6031094667", -- Checkmark icon
                 ImageColor3 = Color3.fromRGB(255, 255, 255),
                 Parent = box
             })
-            
-            TweenService:Create(checkmark, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = UDim2.new(0, 12, 0, 12)
-            }):Play()
-        else
-            for _, child in ipairs(box:GetChildren()) do
-                if child.Name == "Checkmark" then
-                    -- Fade out animation
-                    TweenService:Create(child, TweenInfo.new(0.1), {
-                        Size = UDim2.new(0, 0, 0, 0),
-                        ImageTransparency = 1
-                    }):Play()
-                    
-                    task.delay(0.1, function()
-                        child:Destroy()
-                    end)
-                end
-            end
         end
-    end
+    end)
+    
+    -- Hover effects
+    clickArea.MouseEnter:Connect(function()
+        if box and box.Parent then
+            box.BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonHoverColor
+        end
+    end)
+    
+    clickArea.MouseLeave:Connect(function()
+        if box and box.Parent then
+            box.BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonColor
+        end
+    end)
     
     return value
 end
@@ -878,6 +898,16 @@ function ImGui.Slider(label, value, min, max, format)
         Parent = container
     })
     
+    -- Clickable area covering track for better input handling
+    local trackClickArea = createInstance("TextButton", {
+        Name = "TrackClickArea",
+        Size = UDim2.new(1, 0, 0, 24), -- Larger clickable area
+        Position = UDim2.new(0, 0, 0.5, -12),
+        BackgroundTransparency = 1,
+        Text = "",
+        Parent = track
+    })
+    
     -- Add rounded corners to track
     createInstance("UICorner", {
         CornerRadius = UDim.new(1, 0), -- Fully rounded
@@ -895,21 +925,23 @@ function ImGui.Slider(label, value, min, max, format)
         Parent = track
     })
     
-    -- Add rounded corners to fill and gradient
+    -- Add rounded corners to fill
     createInstance("UICorner", {
         CornerRadius = UDim.new(1, 0),
         Parent = fill
     })
     
-    -- Add gradient to fill
-    createInstance("UIGradient", {
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0),
-            NumberSequenceKeypoint.new(1, 0.2)
-        }),
-        Rotation = 90,
-        Parent = fill
-    })
+    -- Add gradient to fill if enabled
+    if ImGui.style.useGradients then
+        createInstance("UIGradient", {
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0),
+                NumberSequenceKeypoint.new(1, 0.2)
+            }),
+            Rotation = 90,
+            Parent = fill
+        })
+    end
     
     -- Create slider handle
     local handle = createInstance("Frame", {
@@ -920,6 +952,15 @@ function ImGui.Slider(label, value, min, max, format)
         BorderSizePixel = 0,
         ZIndex = 2,
         Parent = track
+    })
+    
+    -- Make handle draggable with TextButton
+    local handleButton = createInstance("TextButton", {
+        Name = "HandleButton",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        Parent = handle
     })
     
     -- Add rounded corners to handle
@@ -953,65 +994,77 @@ function ImGui.Slider(label, value, min, max, format)
     
     local position = ImGui.AddItem(container, totalWidth, totalHeight)
     
-    -- Check for interactions
-    local isTrackHovered = ImGui.mouse.position.X >= track.AbsolutePosition.X and
-                          ImGui.mouse.position.X <= track.AbsolutePosition.X + sliderWidth and
-                          ImGui.mouse.position.Y >= track.AbsolutePosition.Y - 5 and
-                          ImGui.mouse.position.Y <= track.AbsolutePosition.Y + sliderHeight + 5
+    -- Variables to track dragging state
+    local isDragging = false
     
-    if isTrackHovered then
-        ImGui.hoveredItem = sliderId
-        handle.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
-    else
-        handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    end
-    
-    local isActive = ImGui.activeItem == sliderId
-    if isTrackHovered and ImGui.mouse.leftPressed then
-        ImGui.activeItem = sliderId
-        isActive = true
-        
-        -- Add click animation
-        TweenService:Create(handle, TweenInfo.new(0.1), {
-            Size = UDim2.new(0, 14, 0, 22),
-            Position = UDim2.new(0, fillWidth - 7, 0, -5)
-        }):Play()
-    end
-    
-    if isActive and (ImGui.mouse.leftDown or ImGui.mouse.leftPressed) then
-        -- Calculate new value based on mouse position
+    -- Function to update slider value based on mouse position
+    local function updateSliderValue(mousePos)
+        local trackAbsPos = track.AbsolutePosition
         local percent = math.clamp(
-            (ImGui.mouse.position.X - track.AbsolutePosition.X) / sliderWidth,
+            (mousePos.X - trackAbsPos.X) / sliderWidth,
             0, 1
         )
-        value = min + percent * (max - min)
         
-        -- Update fill and handle position with smooth animation
+        local newValue = min + percent * (max - min)
+        
+        -- Update fill and handle position directly without tweens
         fillWidth = percent * sliderWidth
-        TweenService:Create(fill, TweenInfo.new(0.05), {
-            Size = UDim2.new(0, fillWidth, 1, 0)
-        }):Play()
+        fill.Size = UDim2.new(0, fillWidth, 1, 0)
+        handle.Position = UDim2.new(0, fillWidth - 6, 0, -4)
         
-        TweenService:Create(handle, TweenInfo.new(0.05), {
-            Position = UDim2.new(0, fillWidth - 6, 0, -4)
-        }):Play()
-        
-        -- Update value text
-        valueText = string.format(format, value)
-        valueLabel.Text = valueText
+        -- Update value and display
+        value = newValue
+        valueLabel.Text = string.format(format, value)
     end
     
-    if ImGui.mouse.leftReleased then
-        if ImGui.activeItem == sliderId then
-            ImGui.activeItem = nil
-            
-            -- Reset handle size
-            TweenService:Create(handle, TweenInfo.new(0.1), {
-                Size = UDim2.new(0, 12, 0, 20),
-                Position = UDim2.new(0, fillWidth - 6, 0, -4)
-            }):Play()
+    -- Track click handler (jump to position)
+    trackClickArea.MouseButton1Down:Connect(function(x, y)
+        local mousePos = Vector2.new(x, y)
+        isDragging = true
+        updateSliderValue(mousePos)
+        
+        -- Visual feedback
+        handle.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
+    end)
+    
+    -- Handle drag handlers
+    handleButton.MouseButton1Down:Connect(function()
+        isDragging = true
+        
+        -- Visual feedback
+        handle.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
+    end)
+    
+    -- Global mouse handlers for dragging
+    UserInputService.InputChanged:Connect(function(input)
+        if not isDragging then return end
+        
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateSliderValue(input.Position)
         end
-    end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if not isDragging then return end
+        
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = false
+            
+            -- Reset handle appearance
+            handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        end
+    end)
+    
+    -- Hover effects for handle
+    handleButton.MouseEnter:Connect(function()
+        handle.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    end)
+    
+    handleButton.MouseLeave:Connect(function()
+        if not isDragging then
+            handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        end
+    end)
     
     return value
 end
@@ -1079,7 +1132,7 @@ function ImGui.InputText(label, text, width)
         Parent = inputContainer
     })
     
-    -- Create input box
+    -- Create input box with better performance settings
     local inputBox = createInstance("TextBox", {
         Name = "InputBox",
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -1100,61 +1153,43 @@ function ImGui.InputText(label, text, width)
     
     local position = ImGui.AddItem(container, totalWidth, totalHeight)
     
-    -- Check for interactions
-    local isHovered = ImGui.mouse.position.X >= inputContainer.AbsolutePosition.X and
-                     ImGui.mouse.position.X <= inputContainer.AbsolutePosition.X + inputWidth and
-                     ImGui.mouse.position.Y >= inputContainer.AbsolutePosition.Y and
-                     ImGui.mouse.position.Y <= inputContainer.AbsolutePosition.Y + inputHeight
-    
-    -- Calculate hover and focus colors properly
-    local bgColor = ImGui.style.inputBgColor
+    -- Simpler hover and focus handling for better performance
     local hoverColor = Color3.fromRGB(
-        math.min(255, bgColor.R * 255 + 10),
-        math.min(255, bgColor.G * 255 + 10),
-        math.min(255, bgColor.B * 255 + 10)
-    )
-    local focusColor = Color3.fromRGB(
-        math.min(255, bgColor.R * 255 + 15),
-        math.min(255, bgColor.G * 255 + 15),
-        math.min(255, bgColor.B * 255 + 20)
+        math.min(255, ImGui.style.inputBgColor.R * 255 + 10),
+        math.min(255, ImGui.style.inputBgColor.G * 255 + 10),
+        math.min(255, ImGui.style.inputBgColor.B * 255 + 10)
     )
     
-    if isHovered then
-        ImGui.hoveredItem = inputId
-        -- Hover effect
-        TweenService:Create(inputContainer, TweenInfo.new(0.1), {
-            BackgroundColor3 = hoverColor
-        }):Play()
-    else
-        -- Reset color
-        TweenService:Create(inputContainer, TweenInfo.new(0.1), {
-            BackgroundColor3 = ImGui.style.inputBgColor
-        }):Play()
-    end
+    local focusColor = Color3.fromRGB(
+        math.min(255, ImGui.style.inputBgColor.R * 255 + 15),
+        math.min(255, ImGui.style.inputBgColor.G * 255 + 15),
+        math.min(255, ImGui.style.inputBgColor.B * 255 + 20)
+    )
+    
+    -- Direct event handling instead of tween animations for better performance
+    inputBox.MouseEnter:Connect(function()
+        inputContainer.BackgroundColor3 = hoverColor
+    end)
+    
+    inputBox.MouseLeave:Connect(function()
+        if not inputBox:IsFocused() then
+            inputContainer.BackgroundColor3 = ImGui.style.inputBgColor
+        end
+    end)
     
     -- Focus effect
     inputBox.Focused:Connect(function()
-        TweenService:Create(inputContainer, TweenInfo.new(0.2), {
-            BackgroundColor3 = focusColor
-        }):Play()
-        
-        -- Highlight the stroke
-        TweenService:Create(inputContainer:FindFirstChildOfClass("UIStroke"), TweenInfo.new(0.2), {
-            Color = ImGui.style.sliderColor,
-            Transparency = 0
-        }):Play()
+        inputContainer.BackgroundColor3 = focusColor
+        -- Highlight the stroke directly
+        inputContainer:FindFirstChildOfClass("UIStroke").Color = ImGui.style.sliderColor
+        inputContainer:FindFirstChildOfClass("UIStroke").Transparency = 0
     end)
     
     inputBox.FocusLost:Connect(function()
-        TweenService:Create(inputContainer, TweenInfo.new(0.2), {
-            BackgroundColor3 = ImGui.style.inputBgColor
-        }):Play()
-        
-        -- Reset the stroke
-        TweenService:Create(inputContainer:FindFirstChildOfClass("UIStroke"), TweenInfo.new(0.2), {
-            Color = ImGui.style.borderColor,
-            Transparency = 0.5
-        }):Play()
+        inputContainer.BackgroundColor3 = ImGui.style.inputBgColor
+        -- Reset the stroke directly
+        inputContainer:FindFirstChildOfClass("UIStroke").Color = ImGui.style.borderColor
+        inputContainer:FindFirstChildOfClass("UIStroke").Transparency = 0.5
     end)
     
     -- Capture text changes
@@ -1212,7 +1247,7 @@ function ImGui.SameLine(offsetX)
 end
 
 -- Finalize the ImGui library
-ImGui.VERSION = "1.0.2"
+ImGui.VERSION = "1.0.3"
 ImGui.LAST_UPDATED = "2023-12-20"
 
 -- Return the ImGui library object
