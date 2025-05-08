@@ -9,35 +9,35 @@ local ImGui = {
     hoveredItem = nil,
     activeItem = nil,
     
-    -- Style configuration
+    -- Style configuration - modern dark theme
     style = {
-        windowBgColor = Color3.fromRGB(40, 40, 40),
-        windowBorderColor = Color3.fromRGB(80, 80, 80),
-        titleBarColor = Color3.fromRGB(50, 50, 50),
-        titleTextColor = Color3.fromRGB(255, 255, 255),
-        buttonColor = Color3.fromRGB(60, 60, 60),
-        buttonHoverColor = Color3.fromRGB(70, 70, 70),
-        buttonActiveColor = Color3.fromRGB(80, 80, 80),
-        textColor = Color3.fromRGB(255, 255, 255),
-        borderColor = Color3.fromRGB(80, 80, 80),
-        sliderColor = Color3.fromRGB(90, 90, 255),
-        checkboxColor = Color3.fromRGB(90, 90, 255),
-        inputBgColor = Color3.fromRGB(50, 50, 50),
-        framePadding = Vector2.new(8, 4),
-        windowPadding = Vector2.new(8, 8),
-        itemSpacing = Vector2.new(8, 4),
-        scrollbarSize = 12,
-        windowRounding = 2,
-        frameRounding = 2,
+        windowBgColor = Color3.fromRGB(32, 32, 36),
+        windowBorderColor = Color3.fromRGB(60, 60, 70),
+        titleBarColor = Color3.fromRGB(46, 46, 58),
+        titleTextColor = Color3.fromRGB(230, 230, 250),
+        buttonColor = Color3.fromRGB(55, 55, 70),
+        buttonHoverColor = Color3.fromRGB(75, 75, 100),
+        buttonActiveColor = Color3.fromRGB(95, 95, 130),
+        textColor = Color3.fromRGB(230, 230, 250),
+        borderColor = Color3.fromRGB(70, 70, 85),
+        sliderColor = Color3.fromRGB(110, 90, 230),
+        checkboxColor = Color3.fromRGB(110, 90, 230),
+        inputBgColor = Color3.fromRGB(40, 40, 50),
+        framePadding = Vector2.new(8, 6),
+        windowPadding = Vector2.new(10, 10),
+        itemSpacing = Vector2.new(10, 6),
+        scrollbarSize = 10,
+        windowRounding = 4,
+        frameRounding = 4,
     },
     
     -- UI element IDs
     nextItemId = 0,
     
-    -- Font settings
+    -- Font settings (fixed to use Enum.Font instead of Font.new)
     font = {
-        regular = Font.new("rbxasset://fonts/families/Ubuntu.json"),
-        bold = Font.new("rbxasset://fonts/families/Ubuntu.json", Enum.FontWeight.Bold),
+        regular = Enum.Font.Ubuntu,
+        bold = Enum.Font.SourceSansBold,
         size = 14
     },
     
@@ -221,53 +221,98 @@ function ImGui.Begin(title, x, y, width, height)
             children = {}
         }
         
-        -- Create window UI
+        -- Create window UI with improved styling
         window.instance = createInstance("Frame", {
             Name = "ImGuiWindow_" .. title,
             Position = UDim2.new(0, window.position.X, 0, window.position.Y),
             Size = UDim2.new(0, window.size.X, 0, window.size.Y),
             BackgroundColor3 = ImGui.style.windowBgColor,
-            BorderColor3 = ImGui.style.windowBorderColor,
-            BorderSizePixel = 1,
+            BorderSizePixel = 0, -- No border, we'll use UICorner for rounding
             Parent = ImGui.ScreenGui
         })
         
-        -- Create title bar
+        -- Add corner rounding
+        createInstance("UICorner", {
+            CornerRadius = UDim.new(0, ImGui.style.windowRounding),
+            Parent = window.instance
+        })
+        
+        -- Add subtle shadow effect
+        local shadow = createInstance("ImageLabel", {
+            Name = "Shadow",
+            Size = UDim2.new(1, 20, 1, 20),
+            Position = UDim2.new(0, -10, 0, -10),
+            BackgroundTransparency = 1,
+            Image = "rbxassetid://5554236805",
+            ImageColor3 = Color3.fromRGB(0, 0, 0),
+            ImageTransparency = 0.65,
+            ScaleType = Enum.ScaleType.Slice,
+            SliceCenter = Rect.new(23, 23, 277, 277),
+            ZIndex = -1,
+            Parent = window.instance
+        })
+        
+        -- Create title bar with gradient
         window.titleBar = createInstance("Frame", {
             Name = "TitleBar",
             Position = UDim2.new(0, 0, 0, 0),
-            Size = UDim2.new(1, 0, 0, 28),
+            Size = UDim2.new(1, 0, 0, 30), -- Slightly taller
             BackgroundColor3 = ImGui.style.titleBarColor,
             BorderSizePixel = 0,
             Parent = window.instance
         })
         
-        -- Create title text
+        -- Round top corners only
+        createInstance("UICorner", {
+            CornerRadius = UDim.new(0, ImGui.style.windowRounding),
+            Parent = window.titleBar
+        })
+        
+        -- Add gradient to title bar
+        createInstance("UIGradient", {
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0),
+                NumberSequenceKeypoint.new(1, 0.2)
+            }),
+            Rotation = 90,
+            Parent = window.titleBar
+        })
+        
+        -- Create title text with better spacing
         window.titleText = createInstance("TextLabel", {
             Name = "TitleText",
-            Position = UDim2.new(0, 8, 0, 0),
-            Size = UDim2.new(1, -16, 1, 0),
+            Position = UDim2.new(0, 10, 0, 0),
+            Size = UDim2.new(1, -20, 1, 0),
             BackgroundTransparency = 1,
             Text = title,
             TextColor3 = ImGui.style.titleTextColor,
-            TextSize = ImGui.font.size,
+            TextSize = ImGui.font.size + 2, -- Slightly larger title text
             Font = ImGui.font.bold,
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = window.titleBar
         })
         
-        -- Create close button
+        -- Create stylish close button
         window.closeButton = createInstance("TextButton", {
             Name = "CloseButton",
-            Position = UDim2.new(1, -28, 0, 0),
-            Size = UDim2.new(0, 28, 0, 28),
+            Position = UDim2.new(1, -30, 0, 0),
+            Size = UDim2.new(0, 30, 0, 30),
             BackgroundTransparency = 1,
             Text = "✕",
             TextColor3 = ImGui.style.titleTextColor,
-            TextSize = ImGui.font.size,
+            TextSize = ImGui.font.size + 2,
             Font = ImGui.font.bold,
             Parent = window.titleBar
         })
+        
+        -- Close button hover effect
+        window.closeButton.MouseEnter:Connect(function()
+            window.closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+        end)
+        
+        window.closeButton.MouseLeave:Connect(function()
+            window.closeButton.TextColor3 = ImGui.style.titleTextColor
+        end)
         
         -- Close button functionality
         window.closeButton.MouseButton1Click:Connect(function()
@@ -283,13 +328,13 @@ function ImGui.Begin(title, x, y, width, height)
             end
         end)
         
-        -- Create content area
+        -- Create content area with improved styling
         window.contentFrame = createInstance("ScrollingFrame", {
             Name = "ContentFrame",
-            Position = UDim2.new(0, ImGui.style.windowPadding.X, 0, 28 + ImGui.style.windowPadding.Y),
+            Position = UDim2.new(0, ImGui.style.windowPadding.X, 0, 30 + ImGui.style.windowPadding.Y),
             Size = UDim2.new(
                 1, -ImGui.style.windowPadding.X * 2,
-                1, -(28 + ImGui.style.windowPadding.Y * 2)
+                1, -(30 + ImGui.style.windowPadding.Y * 2)
             ),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
@@ -300,10 +345,7 @@ function ImGui.Begin(title, x, y, width, height)
         })
         
         -- Initialize content cursor
-        window.contentArea.cursor = Vector2.new(
-            0,
-            0
-        )
+        window.contentArea.cursor = Vector2.new(0, 0)
         
         -- Add window to list
         table.insert(ImGui.windows, window)
@@ -409,20 +451,52 @@ function ImGui.Button(label, width)
     local buttonWidth = width or textSize.X + ImGui.style.framePadding.X * 2
     local buttonHeight = textSize.Y + ImGui.style.framePadding.Y * 2
     
-    -- Create button element
+    -- Create button container for animations
+    local container = createInstance("Frame", {
+        Name = "ButtonContainer_" .. label,
+        Size = UDim2.new(0, buttonWidth, 0, buttonHeight),
+        BackgroundTransparency = 1
+    })
+    
+    -- Create button element with improved styling
     local button = createInstance("TextButton", {
         Name = "ImGuiButton_" .. label,
-        Size = UDim2.new(0, buttonWidth, 0, buttonHeight),
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 1, 0),
         BackgroundColor3 = ImGui.style.buttonColor,
-        BorderColor3 = ImGui.style.borderColor,
-        BorderSizePixel = 1,
+        BorderSizePixel = 0, -- No border, using UICorner instead
         Text = label,
         TextColor3 = ImGui.style.textColor,
         TextSize = ImGui.font.size,
-        Font = ImGui.font.regular
+        Font = ImGui.font.regular,
+        Parent = container
     })
     
-    local position = ImGui.AddItem(button, buttonWidth, buttonHeight)
+    -- Add rounded corners
+    createInstance("UICorner", {
+        CornerRadius = UDim.new(0, ImGui.style.frameRounding),
+        Parent = button
+    })
+    
+    -- Add subtle gradient
+    createInstance("UIGradient", {
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0),
+            NumberSequenceKeypoint.new(1, 0.1)
+        }),
+        Rotation = 90,
+        Parent = button
+    })
+    
+    -- Add subtle stroke
+    createInstance("UIStroke", {
+        Color = ImGui.style.borderColor,
+        Thickness = 1,
+        Transparency = 0.5,
+        Parent = button
+    })
+    
+    local position = ImGui.AddItem(container, buttonWidth, buttonHeight)
     
     -- Check for interactions
     local isHovered = ImGui.mouse.position.X >= button.AbsolutePosition.X and
@@ -433,12 +507,36 @@ function ImGui.Button(label, width)
     if isHovered then
         ImGui.hoveredItem = buttonId
         button.BackgroundColor3 = ImGui.style.buttonHoverColor
+        
+        -- Add hover animation
+        TweenService:Create(button, TweenInfo.new(0.2), {
+            BackgroundColor3 = ImGui.style.buttonHoverColor
+        }):Play()
+    else
+        -- Reset color if not hovered
+        TweenService:Create(button, TweenInfo.new(0.2), {
+            BackgroundColor3 = ImGui.style.buttonColor
+        }):Play()
     end
     
     local isClicked = isHovered and ImGui.mouse.leftPressed
     if isClicked then
         ImGui.activeItem = buttonId
-        button.BackgroundColor3 = ImGui.style.buttonActiveColor
+        
+        -- Add click animation
+        TweenService:Create(button, TweenInfo.new(0.1), {
+            BackgroundColor3 = ImGui.style.buttonActiveColor,
+            Size = UDim2.new(0.98, 0, 0.98, 0),
+            Position = UDim2.new(0.01, 0, 0.01, 0)
+        }):Play()
+        
+        -- Reset after animation
+        task.delay(0.1, function()
+            TweenService:Create(button, TweenInfo.new(0.1), {
+                Size = UDim2.new(1, 0, 1, 0),
+                Position = UDim2.new(0, 0, 0, 0)
+            }):Play()
+        end)
     end
     
     return isClicked
@@ -466,30 +564,59 @@ function ImGui.Checkbox(label, value)
         BackgroundTransparency = 1
     })
     
-    -- Create checkbox box
+    -- Create checkbox box with modern style
     local box = createInstance("Frame", {
         Name = "CheckboxBox",
         Position = UDim2.new(0, 0, 0, (totalHeight - checkboxSize) / 2),
         Size = UDim2.new(0, checkboxSize, 0, checkboxSize),
         BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonColor,
-        BorderColor3 = ImGui.style.borderColor,
-        BorderSizePixel = 1,
+        BorderSizePixel = 0,
         Parent = container
     })
     
-    -- Create checkmark if checked
+    -- Add rounded corners
+    createInstance("UICorner", {
+        CornerRadius = UDim.new(0, 4),
+        Parent = box
+    })
+    
+    -- Add gradient
+    createInstance("UIGradient", {
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0),
+            NumberSequenceKeypoint.new(1, 0.1)
+        }),
+        Rotation = 90,
+        Parent = box
+    })
+    
+    -- Add subtle stroke
+    createInstance("UIStroke", {
+        Color = ImGui.style.borderColor,
+        Thickness = 1,
+        Transparency = 0.5,
+        Parent = box
+    })
+    
+    -- Create checkmark if checked with nicer animation
     if value then
-        local checkmark = createInstance("TextLabel", {
+        -- Use a nicer checkmark icon
+        local checkmark = createInstance("ImageLabel", {
             Name = "Checkmark",
-            Position = UDim2.new(0, 0, 0, 0),
-            Size = UDim2.new(1, 0, 1, 0),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(0, 12, 0, 12),
             BackgroundTransparency = 1,
-            Text = "✓",
-            TextColor3 = Color3.fromRGB(255, 255, 255),
-            TextSize = 14,
-            Font = ImGui.font.bold,
+            Image = "rbxassetid://6031094667", -- Checkmark icon
+            ImageColor3 = Color3.fromRGB(255, 255, 255),
             Parent = box
         })
+        
+        -- Add appear animation
+        checkmark.Size = UDim2.new(0, 0, 0, 0)
+        TweenService:Create(checkmark, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 12, 0, 12)
+        }):Play()
     end
     
     -- Create label text
@@ -517,32 +644,62 @@ function ImGui.Checkbox(label, value)
     
     if isHovered then
         ImGui.hoveredItem = checkboxId
-        box.BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonHoverColor
+        -- Animate hover effect
+        TweenService:Create(box, TweenInfo.new(0.1), {
+            BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonHoverColor
+        }):Play()
+    else
+        -- Reset color
+        TweenService:Create(box, TweenInfo.new(0.1), {
+            BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonColor
+        }):Play()
     end
     
     local isClicked = isHovered and ImGui.mouse.leftPressed
     if isClicked then
         ImGui.activeItem = checkboxId
         value = not value
-        box.BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonColor
         
-        -- Update checkmark
+        -- Animate click
+        TweenService:Create(box, TweenInfo.new(0.1), {
+            BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonColor,
+            Size = UDim2.new(0, checkboxSize * 0.8, 0, checkboxSize * 0.8)
+        }):Play()
+        
+        task.delay(0.1, function()
+            TweenService:Create(box, TweenInfo.new(0.1), {
+                Size = UDim2.new(0, checkboxSize, 0, checkboxSize)
+            }):Play()
+        end)
+        
+        -- Update checkmark with animation
         if value then
-            local checkmark = createInstance("TextLabel", {
+            local checkmark = createInstance("ImageLabel", {
                 Name = "Checkmark",
-                Position = UDim2.new(0, 0, 0, 0),
-                Size = UDim2.new(1, 0, 1, 0),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.new(0.5, 0, 0.5, 0),
+                Size = UDim2.new(0, 0, 0, 0),
                 BackgroundTransparency = 1,
-                Text = "✓",
-                TextColor3 = Color3.fromRGB(255, 255, 255),
-                TextSize = 14,
-                Font = ImGui.font.bold,
+                Image = "rbxassetid://6031094667", -- Checkmark icon
+                ImageColor3 = Color3.fromRGB(255, 255, 255),
                 Parent = box
             })
+            
+            TweenService:Create(checkmark, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 12, 0, 12)
+            }):Play()
         else
             for _, child in ipairs(box:GetChildren()) do
                 if child.Name == "Checkmark" then
-                    child:Destroy()
+                    -- Fade out animation
+                    TweenService:Create(child, TweenInfo.new(0.1), {
+                        Size = UDim2.new(0, 0, 0, 0),
+                        ImageTransparency = 1
+                    }):Play()
+                    
+                    task.delay(0.1, function()
+                        child:Destroy()
+                    end)
                 end
             end
         end
@@ -571,10 +728,10 @@ function ImGui.Slider(label, value, min, max, format)
     local valueTextSize = calculateTextSize(valueText, ImGui.font.size, ImGui.font.regular)
     
     local sliderWidth = 150
-    local sliderHeight = 16
+    local sliderHeight = 12 -- Thinner, more modern look
     
     local totalWidth = math.max(textSize.X + 8 + sliderWidth + 8 + valueTextSize.X, 200)
-    local totalHeight = math.max(textSize.Y, sliderHeight, valueTextSize.Y)
+    local totalHeight = math.max(textSize.Y, 20, valueTextSize.Y) -- Add minimum height for better touch
     
     -- Create slider container
     local container = createInstance("Frame", {
@@ -598,18 +755,23 @@ function ImGui.Slider(label, value, min, max, format)
         Parent = container
     })
     
-    -- Create slider track
+    -- Create slider track with improved styling
     local track = createInstance("Frame", {
         Name = "SliderTrack",
         Position = UDim2.new(0, textSize.X + 8, 0, (totalHeight - sliderHeight) / 2),
         Size = UDim2.new(0, sliderWidth, 0, sliderHeight),
         BackgroundColor3 = ImGui.style.buttonColor,
-        BorderColor3 = ImGui.style.borderColor,
-        BorderSizePixel = 1,
+        BorderSizePixel = 0,
         Parent = container
     })
     
-    -- Create slider fill
+    -- Add rounded corners to track
+    createInstance("UICorner", {
+        CornerRadius = UDim.new(1, 0), -- Fully rounded
+        Parent = track
+    })
+    
+    -- Create slider fill with improved styling
     local fillWidth = (value - min) / (max - min) * sliderWidth
     local fill = createInstance("Frame", {
         Name = "SliderFill",
@@ -618,6 +780,47 @@ function ImGui.Slider(label, value, min, max, format)
         BackgroundColor3 = ImGui.style.sliderColor,
         BorderSizePixel = 0,
         Parent = track
+    })
+    
+    -- Add rounded corners to fill and gradient
+    createInstance("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = fill
+    })
+    
+    -- Add gradient to fill
+    createInstance("UIGradient", {
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0),
+            NumberSequenceKeypoint.new(1, 0.2)
+        }),
+        Rotation = 90,
+        Parent = fill
+    })
+    
+    -- Create slider handle
+    local handle = createInstance("Frame", {
+        Name = "SliderHandle",
+        Position = UDim2.new(0, fillWidth - 6, 0, -4),
+        Size = UDim2.new(0, 12, 0, 20),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        ZIndex = 2,
+        Parent = track
+    })
+    
+    -- Add rounded corners to handle
+    createInstance("UICorner", {
+        CornerRadius = UDim.new(0.5, 0),
+        Parent = handle
+    })
+    
+    -- Add shadow to handle
+    createInstance("UIStroke", {
+        Color = ImGui.style.borderColor,
+        Thickness = 1,
+        Transparency = 0.5,
+        Parent = handle
     })
     
     -- Create value text
@@ -640,17 +843,26 @@ function ImGui.Slider(label, value, min, max, format)
     -- Check for interactions
     local isTrackHovered = ImGui.mouse.position.X >= track.AbsolutePosition.X and
                           ImGui.mouse.position.X <= track.AbsolutePosition.X + sliderWidth and
-                          ImGui.mouse.position.Y >= track.AbsolutePosition.Y and
-                          ImGui.mouse.position.Y <= track.AbsolutePosition.Y + sliderHeight
+                          ImGui.mouse.position.Y >= track.AbsolutePosition.Y - 5 and
+                          ImGui.mouse.position.Y <= track.AbsolutePosition.Y + sliderHeight + 5
     
     if isTrackHovered then
         ImGui.hoveredItem = sliderId
+        handle.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    else
+        handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     end
     
     local isActive = ImGui.activeItem == sliderId
     if isTrackHovered and ImGui.mouse.leftPressed then
         ImGui.activeItem = sliderId
         isActive = true
+        
+        -- Add click animation
+        TweenService:Create(handle, TweenInfo.new(0.1), {
+            Size = UDim2.new(0, 14, 0, 22),
+            Position = UDim2.new(0, fillWidth - 7, 0, -5)
+        }):Play()
     end
     
     if isActive and (ImGui.mouse.leftDown or ImGui.mouse.leftPressed) then
@@ -661,9 +873,17 @@ function ImGui.Slider(label, value, min, max, format)
         )
         value = min + percent * (max - min)
         
-        -- Update fill and value text
+        -- Update fill and handle position with smooth animation
         fillWidth = percent * sliderWidth
-        fill.Size = UDim2.new(0, fillWidth, 1, 0)
+        TweenService:Create(fill, TweenInfo.new(0.05), {
+            Size = UDim2.new(0, fillWidth, 1, 0)
+        }):Play()
+        
+        TweenService:Create(handle, TweenInfo.new(0.05), {
+            Position = UDim2.new(0, fillWidth - 6, 0, -4)
+        }):Play()
+        
+        -- Update value text
         valueText = string.format(format, value)
         valueLabel.Text = valueText
     end
@@ -671,6 +891,12 @@ function ImGui.Slider(label, value, min, max, format)
     if ImGui.mouse.leftReleased then
         if ImGui.activeItem == sliderId then
             ImGui.activeItem = nil
+            
+            -- Reset handle size
+            TweenService:Create(handle, TweenInfo.new(0.1), {
+                Size = UDim2.new(0, 12, 0, 20),
+                Position = UDim2.new(0, fillWidth - 6, 0, -4)
+            }):Play()
         end
     end
     
@@ -716,14 +942,37 @@ function ImGui.InputText(label, text, width)
         Parent = container
     })
     
-    -- Create input box
-    local inputBox = createInstance("TextBox", {
-        Name = "InputBox",
+    -- Create input box container for styling
+    local inputContainer = createInstance("Frame", {
+        Name = "InputContainer",
         Position = UDim2.new(0, labelSize.X + 8, 0, (totalHeight - inputHeight) / 2),
         Size = UDim2.new(0, inputWidth, 0, inputHeight),
         BackgroundColor3 = ImGui.style.inputBgColor,
-        BorderColor3 = ImGui.style.borderColor,
-        BorderSizePixel = 1,
+        BorderSizePixel = 0,
+        Parent = container
+    })
+    
+    -- Add rounded corners
+    createInstance("UICorner", {
+        CornerRadius = UDim.new(0, ImGui.style.frameRounding),
+        Parent = inputContainer
+    })
+    
+    -- Add subtle stroke
+    createInstance("UIStroke", {
+        Color = ImGui.style.borderColor,
+        Thickness = 1,
+        Transparency = 0.5,
+        Parent = inputContainer
+    })
+    
+    -- Create input box
+    local inputBox = createInstance("TextBox", {
+        Name = "InputBox",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(1, -10, 1, -2), -- Add padding inside
+        BackgroundTransparency = 1,
         Text = text,
         TextColor3 = ImGui.style.textColor,
         TextSize = ImGui.font.size,
@@ -731,20 +980,64 @@ function ImGui.InputText(label, text, width)
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
         ClearTextOnFocus = false,
-        Parent = container
+        PlaceholderText = "Enter text...",
+        PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
+        Parent = inputContainer
     })
     
     local position = ImGui.AddItem(container, totalWidth, totalHeight)
     
     -- Check for interactions
-    local isHovered = ImGui.mouse.position.X >= inputBox.AbsolutePosition.X and
-                     ImGui.mouse.position.X <= inputBox.AbsolutePosition.X + inputWidth and
-                     ImGui.mouse.position.Y >= inputBox.AbsolutePosition.Y and
-                     ImGui.mouse.position.Y <= inputBox.AbsolutePosition.Y + inputHeight
+    local isHovered = ImGui.mouse.position.X >= inputContainer.AbsolutePosition.X and
+                     ImGui.mouse.position.X <= inputContainer.AbsolutePosition.X + inputWidth and
+                     ImGui.mouse.position.Y >= inputContainer.AbsolutePosition.Y and
+                     ImGui.mouse.position.Y <= inputContainer.AbsolutePosition.Y + inputHeight
     
     if isHovered then
         ImGui.hoveredItem = inputId
+        -- Hover effect
+        TweenService:Create(inputContainer, TweenInfo.new(0.1), {
+            BackgroundColor3 = Color3.fromRGB(
+                ImGui.style.inputBgColor.R * 255 + 10,
+                ImGui.style.inputBgColor.G * 255 + 10,
+                ImGui.style.inputBgColor.B * 255 + 10
+            )
+        }):Play()
+    else
+        -- Reset color
+        TweenService:Create(inputContainer, TweenInfo.new(0.1), {
+            BackgroundColor3 = ImGui.style.inputBgColor
+        }):Play()
     end
+    
+    -- Focus effect
+    inputBox.Focused:Connect(function()
+        TweenService:Create(inputContainer, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(
+                ImGui.style.inputBgColor.R * 255 + 15,
+                ImGui.style.inputBgColor.G * 255 + 15, 
+                ImGui.style.inputBgColor.B * 255 + 20
+            )
+        }):Play()
+        
+        -- Highlight the stroke
+        TweenService:Create(inputContainer:FindFirstChildOfClass("UIStroke"), TweenInfo.new(0.2), {
+            Color = ImGui.style.sliderColor,
+            Transparency = 0
+        }):Play()
+    end)
+    
+    inputBox.FocusLost:Connect(function()
+        TweenService:Create(inputContainer, TweenInfo.new(0.2), {
+            BackgroundColor3 = ImGui.style.inputBgColor
+        }):Play()
+        
+        -- Reset the stroke
+        TweenService:Create(inputContainer:FindFirstChildOfClass("UIStroke"), TweenInfo.new(0.2), {
+            Color = ImGui.style.borderColor,
+            Transparency = 0.5
+        }):Play()
+    end)
     
     -- Capture text changes
     local newText = text
