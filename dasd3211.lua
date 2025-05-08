@@ -118,7 +118,7 @@ function library.new(library_title, cfg_location)
                 for _3,sector in next, section do
                     for _4,element in next, sector do
                         if element.Color then
-                            element.Color = Color3.new(element.Color.R, element.Color.G, element.Color.B)
+                            element.Color = Color3.new(255, 0, 0)
                         end
 
                         pcall(function()
