@@ -29,6 +29,11 @@ local ImGui = {
         scrollbarSize = 10,
         windowRounding = 4,
         frameRounding = 4,
+        
+        -- Performance options
+        useGradients = false,  -- Disable gradients for better performance
+        useAnimations = true,  -- Can disable animations for better performance
+        animationSpeed = 0.1,  -- Faster animations (was 0.2)
     },
     
     -- UI element IDs
@@ -279,31 +284,16 @@ function ImGui.Begin(title, x, y, width, height)
             Parent = window.instance
         })
         
-        -- Add subtle shadow effect - fixed to avoid ZIndex issues using a separate image
-        local shadowParent = createInstance("Frame", {
-            Name = "ShadowParent",
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            ZIndex = -1, -- This will ensure it's below other elements
-            Parent = window.instance
-        })
-        
-        local shadow = createInstance("ImageLabel", {
-            Name = "Shadow",
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.new(1, 20, 1, 20),
-            BackgroundTransparency = 1,
-            Image = "rbxassetid://5554236805",
-            ImageColor3 = Color3.fromRGB(0, 0, 0),
-            ImageTransparency = 0.65,
-            ScaleType = Enum.ScaleType.Slice,
-            SliceCenter = Rect.new(23, 23, 277, 277),
-            ZIndex = 0, -- A simple, fixed ZIndex to avoid issues
-            Parent = shadowParent
-        })
+        -- Add subtle shadow effect if not disabled for performance
+        if ImGui.style.useGradients then
+            -- Simplified shadow approach - just a stroke
+            createInstance("UIStroke", {
+                Color = Color3.fromRGB(0, 0, 0),
+                Thickness = 2,
+                Transparency = 0.7,
+                Parent = window.instance
+            })
+        end
         
         -- Create title bar with gradient
         window.titleBar = createInstance("Frame", {
@@ -321,15 +311,17 @@ function ImGui.Begin(title, x, y, width, height)
             Parent = window.titleBar
         })
         
-        -- Add gradient to title bar
-        createInstance("UIGradient", {
-            Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0),
-                NumberSequenceKeypoint.new(1, 0.2)
-            }),
-            Rotation = 90,
-            Parent = window.titleBar
-        })
+        -- Add gradient to title bar if gradients enabled
+        if ImGui.style.useGradients then
+            createInstance("UIGradient", {
+                Transparency = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 0),
+                    NumberSequenceKeypoint.new(1, 0.2)
+                }),
+                Rotation = 90,
+                Parent = window.titleBar
+            })
+        end
         
         -- Create title text with better spacing
         window.titleText = createInstance("TextLabel", {
@@ -358,7 +350,7 @@ function ImGui.Begin(title, x, y, width, height)
             Parent = window.titleBar
         })
         
-        -- Close button hover effect
+        -- Close button hover effect - direct color change instead of animation for performance
         window.closeButton.MouseEnter:Connect(function()
             window.closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
         end)
@@ -546,15 +538,17 @@ function ImGui.Button(label, width)
         Parent = button
     })
     
-    -- Add subtle gradient
-    createInstance("UIGradient", {
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0),
-            NumberSequenceKeypoint.new(1, 0.1)
-        }),
-        Rotation = 90,
-        Parent = button
-    })
+    -- Add subtle gradient only if enabled for performance
+    if ImGui.style.useGradients then
+        createInstance("UIGradient", {
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0),
+                NumberSequenceKeypoint.new(1, 0.1)
+            }),
+            Rotation = 90,
+            Parent = button
+        })
+    end
     
     -- Add subtle stroke
     createInstance("UIStroke", {
@@ -576,35 +570,45 @@ function ImGui.Button(label, width)
         ImGui.hoveredItem = buttonId
         button.BackgroundColor3 = ImGui.style.buttonHoverColor
         
-        -- Add hover animation
-        TweenService:Create(button, TweenInfo.new(0.2), {
-            BackgroundColor3 = ImGui.style.buttonHoverColor
-        }):Play()
+        -- Apply hover animation only if animations are enabled
+        if ImGui.style.useAnimations then
+            TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
+                BackgroundColor3 = ImGui.style.buttonHoverColor
+            }):Play()
+        end
     else
-        -- Reset color if not hovered
-        TweenService:Create(button, TweenInfo.new(0.2), {
-            BackgroundColor3 = ImGui.style.buttonColor
-        }):Play()
+        -- Set color directly if animations disabled
+        if not ImGui.style.useAnimations then
+            button.BackgroundColor3 = ImGui.style.buttonColor
+        else
+            -- Reset color if not hovered with animation
+            TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
+                BackgroundColor3 = ImGui.style.buttonColor
+            }):Play()
+        end
     end
     
     local isClicked = isHovered and ImGui.mouse.leftPressed
     if isClicked then
         ImGui.activeItem = buttonId
+        button.BackgroundColor3 = ImGui.style.buttonActiveColor
         
-        -- Add click animation
-        TweenService:Create(button, TweenInfo.new(0.1), {
-            BackgroundColor3 = ImGui.style.buttonActiveColor,
-            Size = UDim2.new(0.98, 0, 0.98, 0),
-            Position = UDim2.new(0.01, 0, 0.01, 0)
-        }):Play()
-        
-        -- Reset after animation
-        task.delay(0.1, function()
-            TweenService:Create(button, TweenInfo.new(0.1), {
-                Size = UDim2.new(1, 0, 1, 0),
-                Position = UDim2.new(0, 0, 0, 0)
+        -- Add click animation only if enabled
+        if ImGui.style.useAnimations then
+            TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
+                BackgroundColor3 = ImGui.style.buttonActiveColor,
+                Size = UDim2.new(0.98, 0, 0.98, 0),
+                Position = UDim2.new(0.01, 0, 0.01, 0)
             }):Play()
-        end)
+            
+            -- Reset after animation
+            task.delay(ImGui.style.animationSpeed + 0.05, function()
+                TweenService:Create(button, TweenInfo.new(ImGui.style.animationSpeed), {
+                    Size = UDim2.new(1, 0, 1, 0),
+                    Position = UDim2.new(0, 0, 0, 0)
+                }):Play()
+            end)
+        end
     end
     
     return isClicked
