@@ -149,57 +149,67 @@ function ImGui.Init(options)
     
     ImGui.ScreenGui = screenGui
     
-    -- Initialize mouse position
-    pcall(function()
-        local mousePos = UserInputService:GetMouseLocation()
-        ImGui.mouse.position = Vector2.new(mousePos.X, mousePos.Y)
-        ImGui.mouse.lastPosition = Vector2.new(mousePos.X, mousePos.Y)
-    end)
+    -- Удаляем все старые соединения, если были
+    ImGui.Shutdown()
     
-    -- Setup input handling with better reliability
-    UserInputService.InputBegan:Connect(function(input)
+    -- Clear all state
+    ImGui.windows = {}
+    ImGui.activeWindow = nil
+    ImGui.hoveredItem = nil
+    ImGui.activeItem = nil
+    ImGui.clickedElements = {}
+    ImGui.lastClickedElements = {}
+    ImGui.connections = {}
+    ImGui.activeDragSlider = nil
+    
+    -- Initialize mouse position
+    local mousePos = UserInputService:GetMouseLocation()
+    ImGui.mouse = {
+        position = Vector2.new(mousePos.X, mousePos.Y),
+        lastPosition = Vector2.new(mousePos.X, mousePos.Y),
+        leftPressed = false,
+        leftReleased = false,
+        leftDown = false
+    }
+    
+    -- Setup input handling
+    local inputBeganConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             ImGui.mouse.leftPressed = true
             ImGui.mouse.leftDown = true
         end
     end)
+    table.insert(ImGui.connections, inputBeganConnection)
     
-    UserInputService.InputEnded:Connect(function(input)
+    local inputEndedConnection = UserInputService.InputEnded:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             ImGui.mouse.leftReleased = true
             ImGui.mouse.leftDown = false
+            
+            -- Сбрасываем активный слайдер при отпускании мыши
+            if ImGui.activeDragSlider then
+                ImGui.activeDragSlider = nil
+            end
         end
     end)
+    table.insert(ImGui.connections, inputEndedConnection)
     
-    -- Update mouse position with better error handling
-    UserInputService.InputChanged:Connect(function(input)
+    local inputChangedConnection = UserInputService.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
-            -- Store last position before updating
             ImGui.mouse.lastPosition = Vector2.new(ImGui.mouse.position.X, ImGui.mouse.position.Y)
-            
-            -- Use pcall to prevent errors if mouse position is temporarily unavailable
             pcall(function()
                 local mousePos = input.Position
                 ImGui.mouse.position = Vector2.new(mousePos.X, mousePos.Y)
             end)
         end
     end)
+    table.insert(ImGui.connections, inputChangedConnection)
     
-    -- Limit render rate for better performance
-    local lastFrameTime = tick()
-    local frameRateLimit = 1/60  -- Limit to 60 FPS
-    
-    -- Main render loop with improved performance
-    RunService.RenderStepped:Connect(function()
-        -- Throttle updates for better performance
-        local currentTime = tick()
-        local deltaTime = currentTime - lastFrameTime
-        
-        if deltaTime >= frameRateLimit then
-            lastFrameTime = currentTime
-            ImGui.NewFrame()
-        end
+    -- Render loop
+    local renderStepConnection = RunService.RenderStepped:Connect(function()
+        ImGui.NewFrame()
     end)
+    table.insert(ImGui.connections, renderStepConnection)
     
     -- Custom cursor is now optional (default: false)
     ImGui.useCustomCursor = options.useCustomCursor or false
@@ -219,13 +229,14 @@ function ImGui.Init(options)
         })
         
         -- Update cursor position
-        RunService.RenderStepped:Connect(function()
+        local cursorUpdateConnection = RunService.RenderStepped:Connect(function()
             if ImGui.cursor and ImGui.cursor.Parent then
                 pcall(function()
                     ImGui.cursor.Position = UDim2.new(0, ImGui.mouse.position.X, 0, ImGui.mouse.position.Y)
                 end)
             end
         end)
+        table.insert(ImGui.connections, cursorUpdateConnection)
     else
         -- Ensure system cursor is enabled if not using custom
         UserInputService.MouseIconEnabled = true
@@ -257,71 +268,45 @@ function ImGui.CleanupConnections()
     ImGui.connections = {}
 end
 
--- Begin a new frame
+-- Reset state for new frame
 function ImGui.NewFrame()
-    -- Reset frame state
-    ImGui.hoveredItem = nil
+    if not ImGui.ScreenGui then return end
     
-    -- Reset slider dragging state if mouse released
-    if ImGui.mouse.leftReleased and ImGui.activeDragSlider then
-        ImGui.activeDragSlider = nil
+    -- Clear any previous state
+    ImGui.activeWindow = nil
+    ImGui.hoveredItem = nil
+    ImGui.nextItemId = 0
+    
+    -- Check that screenGui still exists (prevent errors)
+    if not ImGui.ScreenGui or not ImGui.ScreenGui.Parent then
+        return
     end
     
-    -- Move clicks from current frame to last frame (make a deep copy)
+    -- Clear previous windows
+    for name, window in pairs(ImGui.windows) do
+        if window.frame and window.frame.Parent then
+            window.frame.Parent = nil
+        end
+    end
+    ImGui.windows = {}
+    
+    -- Update input state directly using UserInputService
+    ImGui.mouse.leftPressed = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and not ImGui.mouse.leftDown
+    ImGui.mouse.leftDown = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+    
+    -- Get current mouse position directly, more reliable
+    local mousePos = UserInputService:GetMouseLocation()
+    ImGui.mouse.lastPosition = ImGui.mouse.position
+    ImGui.mouse.position = Vector2.new(mousePos.X, mousePos.Y)
+    
+    -- Better click state transfer - make a proper copy
     ImGui.lastClickedElements = {}
     for id, value in pairs(ImGui.clickedElements) do
         ImGui.lastClickedElements[id] = value
     end
+    
+    -- Reset click state for this new frame
     ImGui.clickedElements = {}
-    
-    -- Clear flags from previous frame
-    ImGui.mouse.leftPressed = false
-    ImGui.mouse.leftReleased = false
-    
-    -- Process window interactions
-    for _, window in ipairs(ImGui.windows) do
-        if window.instance then
-            -- Check if mouse is hovering over window
-            local windowPos = window.instance.Position
-            local windowSize = window.instance.Size
-            local mouseInWindow = ImGui.mouse.position.X >= windowPos.X.Offset and
-                                 ImGui.mouse.position.X <= windowPos.X.Offset + windowSize.X.Offset and
-                                 ImGui.mouse.position.Y >= windowPos.Y.Offset and
-                                 ImGui.mouse.position.Y <= windowPos.Y.Offset + windowSize.Y.Offset
-            
-            -- Fix dragging logic - more reliable tracking
-            if window.dragging and not ImGui.mouse.leftDown then
-                window.dragging = false
-            elseif window.dragging and ImGui.mouse.leftDown then
-                -- Use mouse movement delta for smoother dragging
-                local mouseDelta = Vector2.new(
-                    ImGui.mouse.position.X - ImGui.mouse.lastPosition.X,
-                    ImGui.mouse.position.Y - ImGui.mouse.lastPosition.Y
-                )
-                
-                -- Only move if there's actually movement (prevents jittering)
-                if math.abs(mouseDelta.X) > 0 or math.abs(mouseDelta.Y) > 0 then
-                    local currentPos = window.instance.Position
-                    local newPos = UDim2.new(
-                        0, currentPos.X.Offset + mouseDelta.X,
-                        0, currentPos.Y.Offset + mouseDelta.Y
-                    )
-                    window.instance.Position = newPos
-                end
-            elseif ImGui.mouse.leftPressed and mouseInWindow then
-                -- Check if click is in title bar
-                local titleBarHeight = 30
-                if ImGui.mouse.position.Y < windowPos.Y.Offset + titleBarHeight then
-                    window.dragging = true
-                    
-                    -- Make this window active
-                    if ImGui.activeWindow ~= window then
-                        ImGui.BringWindowToFront(window)
-                    end
-                end
-            end
-        end
-    end
 end
 
 -- Clean up window specific connections to prevent memory leaks
@@ -359,184 +344,217 @@ function ImGui.DestroyWindow(window)
 end
 
 -- Begin a window
-function ImGui.Begin(title, x, y, width, height)
-    -- Generate unique ID for window
-    local windowId = title
+function ImGui.Begin(title, x, y, width, height, flags)
+    -- Generate unique ID for this window
+    local windowId = "Window_" .. title
     
-    -- Check if window already exists
-    local window = nil
-    for i, w in ipairs(ImGui.windows) do
-        if w.id == windowId then
-            window = w
-            break
-        end
-    end
-    
-    -- Create new window if needed
-    if not window then
-        window = {
-            id = windowId,
+    -- Create the window object if it doesn't exist
+    if not ImGui.windows[windowId] then
+        ImGui.windows[windowId] = {
             title = title,
             position = Vector2.new(x or 100, y or 100),
             size = Vector2.new(width or 300, height or 200),
-            dragging = false,
-            dragOffset = Vector2.new(0, 0),
-            contentArea = {
-                position = Vector2.new(0, 0),
-                size = Vector2.new(0, 0),
-                cursor = Vector2.new(0, 0)
-            },
-            children = {},
+            contentSize = Vector2.new(0, 0),
+            isMoving = false,
+            moveOffset = Vector2.new(0, 0),
+            items = {},
+            cursorPos = Vector2.new(ImGui.style.windowPadding.X, ImGui.style.windowPadding.Y + 30), -- Start below title bar
+            lastItem = nil,
+            sameLine = false,
+            layer = 0,
             connections = {} -- Store window-specific connections
         }
-        
-        -- Create window UI with improved styling
-        window.instance = createInstance("Frame", {
-            Name = "ImGuiWindow_" .. title,
-            Position = UDim2.new(0, window.position.X, 0, window.position.Y),
-            Size = UDim2.new(0, window.size.X, 0, window.size.Y),
-            BackgroundColor3 = ImGui.style.windowBgColor,
-            BorderSizePixel = 0, -- No border, we'll use UICorner for rounding
-            Parent = ImGui.ScreenGui
-        })
-        
-        -- Add corner rounding
-        createInstance("UICorner", {
-            CornerRadius = UDim.new(0, ImGui.style.windowRounding),
-            Parent = window.instance
-        })
-        
-        -- Add subtle shadow effect if not disabled for performance
-        if ImGui.style.useGradients then
-            -- Simplified shadow approach - just a stroke
-            createInstance("UIStroke", {
-                Color = Color3.fromRGB(0, 0, 0),
-                Thickness = 2,
-                Transparency = 0.7,
-                Parent = window.instance
-            })
-        end
-        
-        -- Create title bar with gradient
-        window.titleBar = createInstance("Frame", {
-            Name = "TitleBar",
-            Position = UDim2.new(0, 0, 0, 0),
-            Size = UDim2.new(1, 0, 0, 30), -- Slightly taller
-            BackgroundColor3 = ImGui.style.titleBarColor,
-            BorderSizePixel = 0,
-            Parent = window.instance
-        })
-        
-        -- Round top corners only
-        createInstance("UICorner", {
-            CornerRadius = UDim.new(0, ImGui.style.windowRounding),
-            Parent = window.titleBar
-        })
-        
-        -- Add gradient to title bar if gradients enabled
-        if ImGui.style.useGradients then
-            createInstance("UIGradient", {
-                Transparency = NumberSequence.new({
-                    NumberSequenceKeypoint.new(0, 0),
-                    NumberSequenceKeypoint.new(1, 0.2)
-                }),
-                Rotation = 90,
-                Parent = window.titleBar
-            })
-        end
-        
-        -- Create title text with better spacing
-        window.titleText = createInstance("TextLabel", {
-            Name = "TitleText",
-            Position = UDim2.new(0, 10, 0, 0),
-            Size = UDim2.new(1, -20, 1, 0),
-            BackgroundTransparency = 1,
-            Text = title,
-            TextColor3 = ImGui.style.titleTextColor,
-            TextSize = ImGui.font.size + 2, -- Slightly larger title text
-            Font = ImGui.font.bold,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            Parent = window.titleBar
-        })
-        
-        -- Create stylish close button
-        window.closeButton = createInstance("TextButton", {
-            Name = "CloseButton",
-            Position = UDim2.new(1, -30, 0, 0),
-            Size = UDim2.new(0, 30, 0, 30),
-            BackgroundTransparency = 1,
-            Text = "✕",
-            TextColor3 = ImGui.style.titleTextColor,
-            TextSize = ImGui.font.size + 2,
-            Font = ImGui.font.bold,
-            Parent = window.titleBar
-        })
-        
-        -- Close button hover effect
-        ImGui.Connect(window.closeButton, "MouseEnter", function()
-            window.closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end)
-        
-        ImGui.Connect(window.closeButton, "MouseLeave", function()
-            window.closeButton.TextColor3 = ImGui.style.titleTextColor
-        end)
-        
-        -- Close button functionality
-        ImGui.Connect(window.closeButton, "MouseButton1Click", function()
-            ImGui.DestroyWindow(window)
-        end)
-        
-        -- Create content area with improved styling
-        window.contentFrame = createInstance("ScrollingFrame", {
-            Name = "ContentFrame",
-            Position = UDim2.new(0, ImGui.style.windowPadding.X, 0, 30 + ImGui.style.windowPadding.Y),
-            Size = UDim2.new(
-                1, -ImGui.style.windowPadding.X * 2,
-                1, -(30 + ImGui.style.windowPadding.Y * 2)
-            ),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ScrollBarThickness = ImGui.style.scrollbarSize,
-            ScrollBarImageColor3 = ImGui.style.borderColor,
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            Parent = window.instance
-        })
-        
-        -- Initialize content cursor
-        window.contentArea.cursor = Vector2.new(0, 0)
-        
-        -- Add window to list
-        table.insert(ImGui.windows, window)
-    else
-        -- Reset content cursor for existing window
-        window.contentArea.cursor = Vector2.new(0, 0)
-        
-        -- Clear existing content
-        for _, child in ipairs(window.contentFrame:GetChildren()) do
-            child:Destroy()
-        end
     end
     
-    -- Make this window the active window
-    ImGui.BringWindowToFront(window)
+    local window = ImGui.windows[windowId]
+    
+    -- Set this as the active window for adding widgets
     ImGui.activeWindow = window
     
-    return true
+    -- Create window frame
+    local frame = createInstance("Frame", {
+        Name = "ImGuiWindow_" .. title,
+        Position = UDim2.new(0, window.position.X, 0, window.position.Y),
+        Size = UDim2.new(0, window.size.X, 0, window.size.Y),
+        BackgroundColor3 = ImGui.style.windowBgColor,
+        BorderSizePixel = 0,
+        Parent = ImGui.ScreenGui
+    })
+    
+    -- Add rounded corners
+    createInstance("UICorner", {
+        CornerRadius = UDim.new(0, ImGui.style.windowRounding),
+        Parent = frame
+    })
+    
+    -- Add border
+    createInstance("UIStroke", {
+        Color = ImGui.style.windowBorderColor,
+        Thickness = 1,
+        Parent = frame
+    })
+    
+    -- Add title bar
+    local titleBar = createInstance("Frame", {
+        Name = "TitleBar",
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundColor3 = ImGui.style.titleBarColor,
+        BorderSizePixel = 0,
+        Parent = frame
+    })
+    
+    -- Add rounded corners to title bar (top only)
+    createInstance("UICorner", {
+        CornerRadius = UDim.new(0, ImGui.style.windowRounding),
+        Parent = titleBar
+    })
+    
+    -- Create a clip that makes sure only the top corners are rounded
+    local titleBarClip = createInstance("Frame", {
+        Name = "TitleBarBottomClip",
+        Position = UDim2.new(0, 0, 0.5, 0),
+        Size = UDim2.new(1, 0, 0.5, 1),
+        BackgroundColor3 = ImGui.style.titleBarColor,
+        BorderSizePixel = 0,
+        Parent = titleBar
+    })
+    
+    -- Add title text
+    local titleText = createInstance("TextLabel", {
+        Name = "TitleText",
+        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -50, 1, 0),
+        BackgroundTransparency = 1,
+        Text = title,
+        TextColor3 = ImGui.style.titleTextColor,
+        TextSize = ImGui.font.size,
+        Font = ImGui.font.bold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = titleBar
+    })
+    
+    -- Add close button
+    local closeButton = createInstance("TextButton", {
+        Name = "CloseButton",
+        Position = UDim2.new(1, -30, 0.5, -10),
+        Size = UDim2.new(0, 20, 0, 20),
+        BackgroundColor3 = Color3.fromRGB(220, 80, 80),
+        Text = "",
+        AutoButtonColor = true,
+        Parent = titleBar
+    })
+    
+    -- Add rounded corners to close button
+    createInstance("UICorner", {
+        CornerRadius = UDim.new(0, 4),
+        Parent = closeButton
+    })
+    
+    -- Add X symbol to close button
+    local closeX = createInstance("TextLabel", {
+        Name = "CloseX",
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "×",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 18,
+        Font = ImGui.font.bold,
+        Parent = closeButton
+    })
+    
+    -- Make the window draggable
+    local dragging = false
+    local dragInput
+    local dragStart
+    local startPos
+    
+    -- Get all mouse input through absolute coordinates
+    ImGui.Connect(titleBar, "InputBegan", function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+    
+    ImGui.Connect(UserInputService, "InputChanged", function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    
+    ImGui.Connect(UserInputService, "InputEnded", function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    ImGui.Connect(frame, "InputChanged", function(input)
+        if dragging and input == dragInput then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+            window.position = Vector2.new(frame.Position.X.Offset, frame.Position.Y.Offset)
+        end
+    end)
+    
+    -- Handle close button
+    ImGui.Connect(closeButton, "MouseButton1Click", function()
+        frame.Parent = nil
+        ImGui.CleanWindowConnections(windowId)
+        ImGui.windows[windowId] = nil
+    end)
+    
+    -- Create content container with clipping
+    local contentContainer = createInstance("ScrollingFrame", {
+        Name = "ContentContainer",
+        Position = UDim2.new(0, 0, 0, 30),
+        Size = UDim2.new(1, 0, 1, -30),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = ImGui.style.scrollbarSize,
+        ScrollBarImageColor3 = ImGui.style.borderColor,
+        CanvasSize = UDim2.new(0, 0, 0, 0), -- Will be updated as content is added
+        Parent = frame
+    })
+    
+    -- Set padding
+    local contentPadding = createInstance("UIPadding", {
+        PaddingLeft = UDim.new(0, ImGui.style.windowPadding.X),
+        PaddingRight = UDim.new(0, ImGui.style.windowPadding.X),
+        PaddingTop = UDim.new(0, ImGui.style.windowPadding.Y),
+        PaddingBottom = UDim.new(0, ImGui.style.windowPadding.Y),
+        Parent = contentContainer
+    })
+    
+    -- Store references to UI elements
+    window.frame = frame
+    window.contentContainer = contentContainer
+    
+    -- Reset cursor position for new content
+    window.cursorPos = Vector2.new(ImGui.style.windowPadding.X, ImGui.style.windowPadding.Y)
+    window.sameLine = false
+    window.items = {}
+    
+    -- Return the window object
+    return window
 end
 
--- End a window definition
+-- End the current window
 function ImGui.End()
     local window = ImGui.activeWindow
-    if window then
-        -- Update content canvas size
-        window.contentFrame.CanvasSize = UDim2.new(
-            0, 0, 
-            0, window.contentArea.cursor.Y + ImGui.style.windowPadding.Y
-        )
-        
-        -- Clear active window
-        ImGui.activeWindow = nil
-    end
+    if not window then return end
+    
+    -- Reset active window
+    ImGui.activeWindow = nil
+    
+    return window
 end
 
 -- Bring a window to the front
@@ -575,27 +593,63 @@ function ImGui.BringWindowToFront(window)
     end
 end
 
--- Helper function to add a new item to the current window's content
-function ImGui.AddItem(item, width, height)
+-- Add an item to the window
+function ImGui.AddItem(instance, width, height)
     local window = ImGui.activeWindow
     if not window then return end
     
-    local itemPosition = Vector2.new(
-        window.contentArea.cursor.X,
-        window.contentArea.cursor.Y
-    )
+    -- Calculate item position based on cursor
+    local position
     
-    -- Set position and parent
-    item.Position = UDim2.new(0, itemPosition.X, 0, itemPosition.Y)
-    item.Parent = window.contentFrame
+    -- If we're on the same line, use the lastItem position to place this item
+    if window.sameLine and window.lastItem then
+        -- Place at lastItem's position + its width + spacing
+        local lastItemWidth = window.lastItem.width or 0
+        position = Vector2.new(
+            window.lastItem.position.X + lastItemWidth + ImGui.style.itemSpacing.X,
+            window.lastItem.position.Y
+        )
+        
+        -- Reset sameLine flag
+        window.sameLine = false
+    else
+        -- Normal positioning using cursor
+        position = Vector2.new(window.cursorPos.X, window.cursorPos.Y)
+        
+        -- Update cursor for next item (move down)
+        window.cursorPos = Vector2.new(
+            ImGui.style.windowPadding.X,
+            window.cursorPos.Y + height + ImGui.style.itemSpacing.Y
+        )
+    end
     
-    -- Update cursor position for next item
-    window.contentArea.cursor = Vector2.new(
-        window.contentArea.cursor.X,
-        window.contentArea.cursor.Y + height + ImGui.style.itemSpacing.Y
-    )
+    -- Set the position of the instance
+    instance.Position = UDim2.new(0, position.X, 0, position.Y)
     
-    return itemPosition
+    -- Add to window's content container
+    instance.Parent = window.contentContainer
+    
+    -- Update canvas size if needed
+    local bottomY = position.Y + height + ImGui.style.windowPadding.Y
+    if bottomY > window.contentContainer.CanvasSize.Y.Offset then
+        window.contentContainer.CanvasSize = UDim2.new(0, 0, 0, bottomY)
+    end
+    
+    -- Store this item
+    local item = {
+        instance = instance,
+        position = position,
+        width = width,
+        height = height
+    }
+    
+    -- Save as lastItem for possible SameLine usage
+    window.lastItem = item
+    
+    -- Add to items list
+    table.insert(window.items, item)
+    
+    return position
 end
 
 -- Text label
@@ -603,10 +657,12 @@ function ImGui.Text(text)
     local window = ImGui.activeWindow
     if not window then return end
     
-    -- Create label element
+    -- Calculate text size
     local textSize = calculateTextSize(text, ImGui.font.size, ImGui.font.regular)
-    local label = createInstance("TextLabel", {
-        Name = "ImGuiText",
+    
+    -- Create text label
+    local textLabel = createInstance("TextLabel", {
+        Name = "Text",
         Size = UDim2.new(0, textSize.X, 0, textSize.Y),
         BackgroundTransparency = 1,
         Text = text,
@@ -617,7 +673,7 @@ function ImGui.Text(text)
         TextYAlignment = Enum.TextYAlignment.Center
     })
     
-    ImGui.AddItem(label, textSize.X, textSize.Y)
+    ImGui.AddItem(textLabel, textSize.X, textSize.Y)
 end
 
 -- Button control
@@ -1191,20 +1247,18 @@ function ImGui.Separator()
     local window = ImGui.activeWindow
     if not window then return end
     
-    -- Calculate width
-    local separatorWidth = window.contentFrame.AbsoluteSize.X - ImGui.style.windowPadding.X * 2
-    local separatorHeight = 1
+    local width = window.size.X - ImGui.style.windowPadding.X * 2
+    local height = 1
     
-    -- Create separator line
     local separator = createInstance("Frame", {
-        Name = "ImGuiSeparator",
-        Size = UDim2.new(0, separatorWidth, 0, separatorHeight),
+        Name = "Separator",
+        Size = UDim2.new(0, width, 0, height),
         BackgroundColor3 = ImGui.style.borderColor,
-        BorderSizePixel = 0
+        BorderSizePixel = 0,
+        BackgroundTransparency = 0.7
     })
     
-    ImGui.AddItem(separator, separatorWidth, separatorHeight)
-    ImGui.Spacing(ImGui.style.itemSpacing.Y)
+    ImGui.AddItem(separator, width, height + ImGui.style.itemSpacing.Y)
 end
 
 -- Group controls with same line
@@ -1217,45 +1271,42 @@ function ImGui.SameLine(offsetX)
     window.contentArea.cursor = Vector2.new(xPos, window.contentArea.cursor.Y - ImGui.style.itemSpacing.Y)
 end
 
--- Cleanup all resources and connections when shutting down
+-- Shutdown function - очищает все соединения и ресурсы
 function ImGui.Shutdown()
-    -- Clean up all connections first
-    ImGui.CleanupConnections()
-    
-    -- Destroy all windows
-    for i = #ImGui.windows, 1, -1 do
-        ImGui.DestroyWindow(ImGui.windows[i])
+    -- Отключаем все соединения
+    for _, connection in ipairs(ImGui.connections or {}) do
+        if connection and connection.Connected then
+            connection:Disconnect()
+        end
     end
+    ImGui.connections = {}
     
-    -- Clear collections
+    -- Очищаем окна
+    for _, window in pairs(ImGui.windows or {}) do
+        if window.frame and window.frame.Parent then
+            window.frame.Parent = nil
+        end
+    end
     ImGui.windows = {}
-    ImGui.clickedElements = {}
-    ImGui.lastClickedElements = {}
-    ImGui.hitTestCache = {}
     
-    -- Remove main screen gui
-    if ImGui.ScreenGui then
+    -- Удаляем ScreenGui, если он существует
+    if ImGui.ScreenGui and ImGui.ScreenGui.Parent then
         ImGui.ScreenGui:Destroy()
         ImGui.ScreenGui = nil
     end
     
-    -- Remove custom cursor if it exists
-    if ImGui.cursor then
-        ImGui.cursor:Destroy()
-        ImGui.cursor = nil
+    -- Сбрасываем состояние мыши
+    if ImGui.mouse then
+        ImGui.mouse.leftDown = false
+        ImGui.mouse.leftPressed = false
+        ImGui.mouse.leftReleased = false
     end
     
-    -- Restore cursor visibility
-    pcall(function()
-        UserInputService.MouseIconEnabled = true
-    end)
-    
-    -- Reset states
-    ImGui.activeWindow = nil
-    ImGui.hoveredItem = nil
-    ImGui.activeItem = nil
+    -- Сбрасываем активный слайдер
     ImGui.activeDragSlider = nil
-    ImGui.nextItemId = 0
+    
+    -- Включаем стандартный курсор
+    UserInputService.MouseIconEnabled = true
 end
 
 -- Finalize the ImGui library
