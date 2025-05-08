@@ -140,8 +140,6 @@ function library.new(library_title, cfg_location)
         Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.new(0, 700, 0, 500),
         Image = "http://www.roblox.com/asset/?id=7300333488",
-        AutoButtonColor = false,
-        Modal = true,
     }, ScreenGui)
 
     function menu.GetPosition() return ImageLabel.Position end
