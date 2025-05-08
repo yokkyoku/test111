@@ -1887,11 +1887,6 @@ end
                             Size = UDim2.new(0, 100, 1, 0),
                         }, SliderButton)
 
-                        local UIGradient = library:create("UIGradient", {
-                            Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(56, 67, 163))},
-                            Rotation = 90,
-                        }, SliderFrame)
-
                         local SliderValue = library:create("TextLabel", {
                             Name = "SliderValue",
                             BackgroundTransparency = 1,
