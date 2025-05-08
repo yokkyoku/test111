@@ -1,6 +1,6 @@
 -- RobloxImGui: Compact ImGui-style UI library
 local ImGui = {
-    _VERSION = "1.0.3",
+    _VERSION = "1.0.4",
     _AUTHOR = "Claude",
     
     -- State variables
@@ -61,7 +61,13 @@ local ImGui = {
     
     -- Click tracking
     clickedButtons = {},
-    clickedCheckboxes = {}
+    clickedCheckboxes = {},
+    
+    -- Event connections storage (for cleanup)
+    connections = {},
+    
+    -- Slider dragging state
+    activeDragSlider = nil
 }
 
 -- Services
@@ -228,10 +234,38 @@ function ImGui.Init(options)
     return ImGui
 end
 
+-- Utility function to safely connect events and store connections for cleanup
+function ImGui.Connect(instance, event, callback)
+    if not instance or not event then return end
+    
+    -- Create the connection
+    local connection = instance[event]:Connect(callback)
+    
+    -- Store it for later cleanup
+    table.insert(ImGui.connections, connection)
+    
+    return connection
+end
+
+-- Cleanup connections to prevent memory leaks
+function ImGui.CleanupConnections()
+    for i, connection in ipairs(ImGui.connections) do
+        if connection.Connected then
+            connection:Disconnect()
+        end
+    end
+    ImGui.connections = {}
+end
+
 -- Begin a new frame
 function ImGui.NewFrame()
     -- Reset frame state
     ImGui.hoveredItem = nil
+    
+    -- Reset slider dragging state if mouse released
+    if ImGui.mouse.leftReleased and ImGui.activeDragSlider then
+        ImGui.activeDragSlider = nil
+    end
     
     -- Clear flags from previous frame
     ImGui.mouse.leftPressed = false
@@ -283,6 +317,40 @@ function ImGui.NewFrame()
     end
 end
 
+-- Clean up window specific connections to prevent memory leaks
+function ImGui.CleanWindowConnections(window)
+    if not window or not window.connections then return end
+    
+    for _, connection in ipairs(window.connections) do
+        if connection.Connected then
+            connection:Disconnect()
+        end
+    end
+    window.connections = {}
+end
+
+-- Close and destroy window
+function ImGui.DestroyWindow(window)
+    if not window then return end
+    
+    -- Clean up connections
+    ImGui.CleanWindowConnections(window)
+    
+    -- Destroy the window instance
+    if window.instance then
+        window.instance:Destroy()
+        window.instance = nil
+    end
+    
+    -- Remove window from windows list
+    for i, w in ipairs(ImGui.windows) do
+        if w.id == window.id then
+            table.remove(ImGui.windows, i)
+            break
+        end
+    end
+end
+
 -- Begin a window
 function ImGui.Begin(title, x, y, width, height)
     -- Generate unique ID for window
@@ -311,7 +379,8 @@ function ImGui.Begin(title, x, y, width, height)
                 size = Vector2.new(0, 0),
                 cursor = Vector2.new(0, 0)
             },
-            children = {}
+            children = {},
+            connections = {} -- Store window-specific connections
         }
         
         -- Create window UI with improved styling
@@ -396,27 +465,18 @@ function ImGui.Begin(title, x, y, width, height)
             Parent = window.titleBar
         })
         
-        -- Close button hover effect - direct color change instead of animation for performance
-        window.closeButton.MouseEnter:Connect(function()
+        -- Close button hover effect
+        ImGui.Connect(window.closeButton, "MouseEnter", function()
             window.closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
         end)
         
-        window.closeButton.MouseLeave:Connect(function()
+        ImGui.Connect(window.closeButton, "MouseLeave", function()
             window.closeButton.TextColor3 = ImGui.style.titleTextColor
         end)
         
         -- Close button functionality
-        window.closeButton.MouseButton1Click:Connect(function()
-            window.instance:Destroy()
-            window.instance = nil
-            
-            -- Remove window from windows list
-            for i, w in ipairs(ImGui.windows) do
-                if w.id == window.id then
-                    table.remove(ImGui.windows, i)
-                    break
-                end
-            end
+        ImGui.Connect(window.closeButton, "MouseButton1Click", function()
+            ImGui.DestroyWindow(window)
         end)
         
         -- Create content area with improved styling
@@ -440,6 +500,14 @@ function ImGui.Begin(title, x, y, width, height)
         
         -- Add window to list
         table.insert(ImGui.windows, window)
+    else
+        -- Reset content cursor for existing window
+        window.contentArea.cursor = Vector2.new(0, 0)
+        
+        -- Clear existing content
+        for _, child in ipairs(window.contentFrame:GetChildren()) do
+            child:Destroy()
+        end
     end
     
     -- Make this window the active window
@@ -617,7 +685,7 @@ function ImGui.Button(label, width)
     local position = ImGui.AddItem(container, buttonWidth, buttonHeight)
     
     -- Register click handler - store in global clickedButtons table
-    button.MouseButton1Click:Connect(function()
+    ImGui.Connect(button, "MouseButton1Click", function()
         ImGui.clickedButtons[buttonId] = true
         
         -- Visual feedback
@@ -651,13 +719,13 @@ function ImGui.Button(label, width)
     end)
     
     -- Hover effects
-    button.MouseEnter:Connect(function()
+    ImGui.Connect(button, "MouseEnter", function()
         if button and button.Parent then
             button.BackgroundColor3 = ImGui.style.buttonHoverColor
         end
     end)
     
-    button.MouseLeave:Connect(function()
+    ImGui.Connect(button, "MouseLeave", function()
         if button and button.Parent then
             button.BackgroundColor3 = ImGui.style.buttonColor
         end
@@ -775,7 +843,7 @@ function ImGui.Checkbox(label, value)
     local position = ImGui.AddItem(container, totalWidth, totalHeight)
     
     -- Register click handler
-    clickArea.MouseButton1Click:Connect(function()
+    ImGui.Connect(clickArea, "MouseButton1Click", function()
         ImGui.clickedCheckboxes[checkboxId] = true
         
         -- Visual feedback
@@ -826,13 +894,13 @@ function ImGui.Checkbox(label, value)
     end)
     
     -- Hover effects
-    clickArea.MouseEnter:Connect(function()
+    ImGui.Connect(clickArea, "MouseEnter", function()
         if box and box.Parent then
             box.BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonHoverColor
         end
     end)
     
-    clickArea.MouseLeave:Connect(function()
+    ImGui.Connect(clickArea, "MouseLeave", function()
         if box and box.Parent then
             box.BackgroundColor3 = value and ImGui.style.checkboxColor or ImGui.style.buttonColor
         end
@@ -994,9 +1062,6 @@ function ImGui.Slider(label, value, min, max, format)
     
     local position = ImGui.AddItem(container, totalWidth, totalHeight)
     
-    -- Variables to track dragging state
-    local isDragging = false
-    
     -- Function to update slider value based on mouse position
     local function updateSliderValue(mousePos)
         local trackAbsPos = track.AbsolutePosition
@@ -1018,9 +1083,9 @@ function ImGui.Slider(label, value, min, max, format)
     end
     
     -- Track click handler (jump to position)
-    trackClickArea.MouseButton1Down:Connect(function(x, y)
+    ImGui.Connect(trackClickArea, "MouseButton1Down", function(x, y)
         local mousePos = Vector2.new(x, y)
-        isDragging = true
+        ImGui.activeDragSlider = sliderId
         updateSliderValue(mousePos)
         
         -- Visual feedback
@@ -1028,40 +1093,46 @@ function ImGui.Slider(label, value, min, max, format)
     end)
     
     -- Handle drag handlers
-    handleButton.MouseButton1Down:Connect(function()
-        isDragging = true
+    ImGui.Connect(handleButton, "MouseButton1Down", function()
+        ImGui.activeDragSlider = sliderId
         
         -- Visual feedback
         handle.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
     end)
     
-    -- Global mouse handlers for dragging
-    UserInputService.InputChanged:Connect(function(input)
-        if not isDragging then return end
+    -- Global mouse handlers for dragging - now managed in NewFrame
+    local dragInputChangedConn
+    dragInputChangedConn = ImGui.Connect(UserInputService, "InputChanged", function(input)
+        if ImGui.activeDragSlider ~= sliderId then return end
         
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             updateSliderValue(input.Position)
         end
     end)
     
-    UserInputService.InputEnded:Connect(function(input)
-        if not isDragging then return end
+    local dragInputEndedConn
+    dragInputEndedConn = ImGui.Connect(UserInputService, "InputEnded", function(input)
+        if ImGui.activeDragSlider ~= sliderId then return end
         
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isDragging = false
+            ImGui.activeDragSlider = nil
             
             -- Reset handle appearance
-            handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            if handle and handle.Parent then
+                handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            end
         end
     end)
     
     -- Hover effects for handle
-    handleButton.MouseEnter:Connect(function()
-        handle.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    ImGui.Connect(handleButton, "MouseEnter", function()
+        if handle and handle.Parent then
+            handle.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+        end
     end)
     
-    handleButton.MouseLeave:Connect(function()
-        if not isDragging then
+    ImGui.Connect(handleButton, "MouseLeave", function()
+        if handle and handle.Parent and ImGui.activeDragSlider ~= sliderId then
             handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         end
     end)
@@ -1167,35 +1238,46 @@ function ImGui.InputText(label, text, width)
     )
     
     -- Direct event handling instead of tween animations for better performance
-    inputBox.MouseEnter:Connect(function()
-        inputContainer.BackgroundColor3 = hoverColor
+    ImGui.Connect(inputBox, "MouseEnter", function()
+        if inputContainer and inputContainer.Parent then
+            inputContainer.BackgroundColor3 = hoverColor
+        end
     end)
     
-    inputBox.MouseLeave:Connect(function()
+    ImGui.Connect(inputBox, "MouseLeave", function()
+        if not inputContainer or not inputContainer.Parent then return end
         if not inputBox:IsFocused() then
             inputContainer.BackgroundColor3 = ImGui.style.inputBgColor
         end
     end)
     
     -- Focus effect
-    inputBox.Focused:Connect(function()
+    ImGui.Connect(inputBox, "Focused", function()
+        if not inputContainer or not inputContainer.Parent then return end
         inputContainer.BackgroundColor3 = focusColor
+        
         -- Highlight the stroke directly
-        inputContainer:FindFirstChildOfClass("UIStroke").Color = ImGui.style.sliderColor
-        inputContainer:FindFirstChildOfClass("UIStroke").Transparency = 0
+        local stroke = inputContainer:FindFirstChildOfClass("UIStroke")
+        if stroke then
+            stroke.Color = ImGui.style.sliderColor
+            stroke.Transparency = 0
+        end
     end)
     
-    inputBox.FocusLost:Connect(function()
-        inputContainer.BackgroundColor3 = ImGui.style.inputBgColor
-        -- Reset the stroke directly
-        inputContainer:FindFirstChildOfClass("UIStroke").Color = ImGui.style.borderColor
-        inputContainer:FindFirstChildOfClass("UIStroke").Transparency = 0.5
-    end)
-    
-    -- Capture text changes
+    -- Capture text changes and reset appearance
     local newText = text
-    inputBox.FocusLost:Connect(function()
+    ImGui.Connect(inputBox, "FocusLost", function()
+        if not inputContainer or not inputContainer.Parent then return end
         newText = inputBox.Text
+        
+        inputContainer.BackgroundColor3 = ImGui.style.inputBgColor
+        
+        -- Reset the stroke directly
+        local stroke = inputContainer:FindFirstChildOfClass("UIStroke")
+        if stroke then
+            stroke.Color = ImGui.style.borderColor
+            stroke.Transparency = 0.5
+        end
     end)
     
     return newText
@@ -1246,8 +1328,49 @@ function ImGui.SameLine(offsetX)
     window.contentArea.cursor = Vector2.new(xPos, window.contentArea.cursor.Y - ImGui.style.itemSpacing.Y)
 end
 
+-- Cleanup all resources and connections when shutting down
+function ImGui.Shutdown()
+    -- Clean up all connections first
+    ImGui.CleanupConnections()
+    
+    -- Destroy all windows
+    for i = #ImGui.windows, 1, -1 do
+        ImGui.DestroyWindow(ImGui.windows[i])
+    end
+    
+    -- Clear collections
+    ImGui.windows = {}
+    ImGui.clickedButtons = {}
+    ImGui.clickedCheckboxes = {}
+    ImGui.hitTestCache = {}
+    
+    -- Remove main screen gui
+    if ImGui.ScreenGui then
+        ImGui.ScreenGui:Destroy()
+        ImGui.ScreenGui = nil
+    end
+    
+    -- Remove custom cursor if it exists
+    if ImGui.cursor then
+        ImGui.cursor:Destroy()
+        ImGui.cursor = nil
+    end
+    
+    -- Restore cursor visibility
+    pcall(function()
+        UserInputService.MouseIconEnabled = true
+    end)
+    
+    -- Reset states
+    ImGui.activeWindow = nil
+    ImGui.hoveredItem = nil
+    ImGui.activeItem = nil
+    ImGui.activeDragSlider = nil
+    ImGui.nextItemId = 0
+end
+
 -- Finalize the ImGui library
-ImGui.VERSION = "1.0.3"
+ImGui.VERSION = "1.0.4"
 ImGui.LAST_UPDATED = "2023-12-20"
 
 -- Return the ImGui library object
