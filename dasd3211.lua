@@ -241,7 +241,7 @@ function ImGui.Begin(title, x, y, width, height)
             id = windowId,
             title = title,
             position = Vector2.new(x or 100, y or 100),
-            size = Vector2.new(width or 300, height or 200),
+            size = Vector2.new(width or 400, height or 300),
             dragging = false,
             dragOffset = Vector2.new(0, 0),
             contentArea = {
@@ -252,56 +252,37 @@ function ImGui.Begin(title, x, y, width, height)
             children = {}
         }
         
-        -- Create window UI
+        -- Create window UI - always visible
         window.instance = createInstance("Frame", {
             Name = "ImGuiWindow_" .. title,
             Position = UDim2.new(0, window.position.X, 0, window.position.Y),
             Size = UDim2.new(0, window.size.X, 0, window.size.Y),
-            BackgroundColor3 = ImGui.style.windowBgColor,
-            BorderSizePixel = 0,
-            ClipsDescendants = false,
+            BackgroundColor3 = Color3.fromRGB(20, 20, 40), -- Dark blue background
+            BorderSizePixel = 2,
+            BorderColor3 = Color3.fromRGB(255, 255, 255), -- White border
+            ClipsDescendants = false, -- Never clip for debugging
             Parent = ImGui.ScreenGui
         })
         
-        -- Add corner rounding
-        createInstance("UICorner", {
-            CornerRadius = UDim.new(0, ImGui.style.windowRounding),
-            Parent = window.instance
-        })
-        
-        -- Add border using UIStroke
-        createInstance("UIStroke", {
-            Color = ImGui.style.windowBorderColor,
-            Thickness = 1,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-            Parent = window.instance
-        })
-        
-        -- Create title bar
+        -- Create title bar - always visible with distinct color
         window.titleBar = createInstance("Frame", {
             Name = "TitleBar",
             Position = UDim2.new(0, 0, 0, 0),
             Size = UDim2.new(1, 0, 0, 30),
-            BackgroundColor3 = ImGui.style.titleBarColor,
-            BorderSizePixel = 0,
+            BackgroundColor3 = Color3.fromRGB(40, 40, 80), -- Darker blue
+            BorderSizePixel = 1,
             Parent = window.instance
         })
         
-        -- Add rounded top corners
-        createInstance("UICorner", {
-            CornerRadius = UDim.new(0, ImGui.style.windowRounding),
-            Parent = window.titleBar
-        })
-        
-        -- Create title text
+        -- Create title text - bigger and more visible
         window.titleText = createInstance("TextLabel", {
             Name = "TitleText",
             Position = UDim2.new(0, 10, 0, 0),
             Size = UDim2.new(1, -40, 1, 0),
             BackgroundTransparency = 1,
             Text = title,
-            TextColor3 = ImGui.style.titleTextColor,
-            TextSize = ImGui.font.size,
+            TextColor3 = Color3.fromRGB(255, 255, 255), -- White text
+            TextSize = ImGui.font.size * 1.5, -- Bigger font
             Font = ImGui.font.bold,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextYAlignment = Enum.TextYAlignment.Center,
@@ -313,22 +294,14 @@ function ImGui.Begin(title, x, y, width, height)
             Name = "CloseButton",
             Position = UDim2.new(1, -30, 0, 0),
             Size = UDim2.new(0, 30, 0, 30),
-            BackgroundTransparency = 1,
-            Text = "✕",
-            TextColor3 = ImGui.style.titleTextColor,
-            TextSize = ImGui.font.size + 2,
+            BackgroundColor3 = Color3.fromRGB(255, 0, 0), -- Red background
+            BorderSizePixel = 1,
+            Text = "X",
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            TextSize = ImGui.font.size + 5,
             Font = ImGui.font.bold,
             Parent = window.titleBar
         })
-        
-        -- Close button hover effect
-        window.closeButton.MouseEnter:Connect(function()
-            window.closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
-        end)
-        
-        window.closeButton.MouseLeave:Connect(function()
-            window.closeButton.TextColor3 = ImGui.style.titleTextColor
-        end)
         
         -- Close button functionality
         window.closeButton.MouseButton1Click:Connect(function()
@@ -343,37 +316,59 @@ function ImGui.Begin(title, x, y, width, height)
             end
         end)
         
-        -- Create content frame with ClipsDescendants = false for debugging
+        -- Create content frame with maximum visibility for debugging
         window.contentFrame = createInstance("Frame", {
             Name = "ContentFrame",
-            Position = UDim2.new(0, ImGui.style.windowPadding.X, 0, 30 + ImGui.style.windowPadding.Y),
-            Size = UDim2.new(
-                1, -ImGui.style.windowPadding.X * 2,
-                1, -(30 + ImGui.style.windowPadding.Y * 2)
-            ),
-            BackgroundTransparency = 0.9,
-            BackgroundColor3 = Color3.fromRGB(255, 0, 0),
-            BorderSizePixel = 1,
-            BorderColor3 = Color3.fromRGB(255, 0, 0),
-            ClipsDescendants = false,
+            Position = UDim2.new(0, 10, 0, 40), -- Fixed position
+            Size = UDim2.new(1, -20, 1, -50), -- Fixed size
+            BackgroundColor3 = Color3.fromRGB(60, 60, 90), -- Light blue background
+            BackgroundTransparency = 0.2, -- Mostly opaque
+            BorderSizePixel = 2,
+            BorderColor3 = Color3.fromRGB(0, 255, 255), -- Cyan border
+            ClipsDescendants = false, -- Never clip children
             Parent = window.instance
         })
+        
+        -- Debug label
+        if ImGui.debugMode then
+            local debugLabel = createInstance("TextLabel", {
+                Name = "DebugInfo",
+                Position = UDim2.new(0, 0, 0, 0),
+                Size = UDim2.new(0, 150, 0, 20),
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+                BackgroundTransparency = 0.5,
+                BorderSizePixel = 1,
+                Text = "Debug: Content Frame",
+                TextColor3 = Color3.fromRGB(255, 255, 0),
+                TextSize = 10,
+                ZIndex = 100, -- Always on top
+                Parent = window.contentFrame
+            })
+        end
         
         -- Add window to list
         table.insert(ImGui.windows, window)
     else
-        -- IMPORTANT: Clear ALL existing content for redraw
+        -- Clear existing content for redraw
         for _, child in ipairs(window.contentFrame:GetChildren()) do
-            child:Destroy()
+            if child.Name ~= "DebugInfo" then -- Keep debug label
+                child:Destroy()
+            end
         end
     end
     
-    -- ALWAYS reset content cursor when beginning a window
-    window.contentArea.cursor = Vector2.new(0, 0)
+    -- Reset content cursor for new items
+    window.contentArea.cursor = Vector2.new(0, ImGui.debugMode and 20 or 0) -- Start below debug label if present
     
     -- Make this window the active window
     ImGui.activeWindow = window
     ImGui.BringWindowToFront(window)
+    
+    -- Print debug info
+    if ImGui.debugMode then
+        print("Begin window: " .. title .. ", Content frame size: " .. 
+              tostring(window.contentFrame.AbsoluteSize.X) .. "x" .. tostring(window.contentFrame.AbsoluteSize.Y))
+    end
     
     return true
 end
@@ -461,21 +456,59 @@ function ImGui.Text(text)
     -- Calculate text size
     local textSize = calculateTextSize(text, ImGui.font.size, ImGui.font.regular)
     
-    -- Create label with fixed size and position
+    -- Make text element much bigger and more visible
     local label = createInstance("TextLabel", {
         Name = "ImGuiText",
-        Size = UDim2.new(0, textSize.X, 0, textSize.Y),
-        BackgroundTransparency = 1,
+        Size = UDim2.new(0, textSize.X, 0, textSize.Y * 2), -- Bigger height
+        BackgroundTransparency = 0, -- Visible background
+        BackgroundColor3 = Color3.fromRGB(50, 50, 70), -- Dark background
+        BorderSizePixel = 2, -- Add border
+        BorderColor3 = Color3.fromRGB(255, 255, 0), -- Yellow border
         Text = text,
-        TextColor3 = ImGui.style.textColor,
-        TextSize = ImGui.font.size,
-        Font = ImGui.font.regular,
+        TextColor3 = Color3.fromRGB(255, 255, 100), -- Bright yellow text
+        TextSize = ImGui.font.size * 1.5, -- Bigger font
+        Font = ImGui.font.bold, -- Bold font
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Center
     })
     
-    -- Add to window content
-    ImGui.AddItem(label, textSize.X, textSize.Y)
+    -- Set ZIndex to ensure visibility
+    label.ZIndex = 10
+    
+    -- Debug position info
+    if ImGui.debugMode then
+        local posInfo = Instance.new("TextLabel")
+        posInfo.Name = "PositionInfo"
+        posInfo.Size = UDim2.new(1, 0, 0, 16)
+        posInfo.Position = UDim2.new(0, 0, 1, 0)
+        posInfo.Text = "Pos: " .. tostring(window.contentArea.cursor.X) .. ", " .. tostring(window.contentArea.cursor.Y)
+        posInfo.TextColor3 = Color3.fromRGB(255, 0, 0)
+        posInfo.BackgroundTransparency = 0.5
+        posInfo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        posInfo.TextSize = 10
+        posInfo.Parent = label
+    end
+    
+    -- Add to window content with direct positioning
+    local itemPosition = Vector2.new(
+        window.contentArea.cursor.X,
+        window.contentArea.cursor.Y
+    )
+    
+    -- Position directly instead of using AddItem
+    label.Position = UDim2.new(0, itemPosition.X, 0, itemPosition.Y)
+    label.Parent = window.contentFrame
+    
+    -- Print debug info
+    if ImGui.debugMode then
+        print("Added text: " .. text .. " at ", itemPosition.X, itemPosition.Y)
+    end
+    
+    -- Update cursor position manually
+    window.contentArea.cursor = Vector2.new(
+        window.contentArea.cursor.X,
+        window.contentArea.cursor.Y + label.AbsoluteSize.Y + ImGui.style.itemSpacing.Y
+    )
 end
 
 -- Button control - simplified for reliability
@@ -487,30 +520,44 @@ function ImGui.Button(label, width)
     ImGui.nextItemId = ImGui.nextItemId + 1
     local buttonId = "Button_" .. label .. "_" .. ImGui.nextItemId
     
-    -- Calculate size
-    local textSize = calculateTextSize(label, ImGui.font.size, ImGui.font.regular)
-    local buttonWidth = width or textSize.X + ImGui.style.framePadding.X * 2
-    local buttonHeight = textSize.Y + ImGui.style.framePadding.Y * 2
+    -- Calculate size with bigger dimensions
+    local textSize = calculateTextSize(label, ImGui.font.size * 1.5, ImGui.font.bold) -- Bigger font
+    local buttonWidth = width or textSize.X + ImGui.style.framePadding.X * 4 -- Wider
+    local buttonHeight = textSize.Y * 2 + ImGui.style.framePadding.Y * 2 -- Taller
     
-    -- Create button
+    -- Create button with high visibility
     local button = createInstance("TextButton", {
         Name = "ImGuiButton_" .. label,
-        BackgroundColor3 = ImGui.style.buttonColor,
-        BorderSizePixel = 0,
+        BackgroundColor3 = Color3.fromRGB(100, 100, 255), -- Bright blue
+        BorderSizePixel = 2,
+        BorderColor3 = Color3.fromRGB(255, 255, 255), -- White border
         Text = label,
-        TextColor3 = ImGui.style.textColor,
-        TextSize = ImGui.font.size,
-        Font = ImGui.font.regular,
+        TextColor3 = Color3.fromRGB(255, 255, 255), -- White text
+        TextSize = ImGui.font.size * 1.5, -- Bigger font
+        Font = ImGui.font.bold, -- Bold font
     })
     
-    -- Add rounded corners
-    createInstance("UICorner", {
-        CornerRadius = UDim.new(0, ImGui.style.frameRounding),
-        Parent = button
-    })
+    -- Position directly instead of using AddItem for debugging
+    local itemPosition = Vector2.new(
+        window.contentArea.cursor.X,
+        window.contentArea.cursor.Y
+    )
     
-    -- Add to window content with explicit size
-    ImGui.AddItem(button, buttonWidth, buttonHeight)
+    button.Position = UDim2.new(0, itemPosition.X, 0, itemPosition.Y)
+    button.Size = UDim2.new(0, buttonWidth, 0, buttonHeight)
+    button.Parent = window.contentFrame
+    button.ZIndex = 10 -- Ensure visibility
+    
+    -- Print debug info
+    if ImGui.debugMode then
+        print("Added button: " .. label .. " at ", itemPosition.X, itemPosition.Y)
+    end
+    
+    -- Update cursor position manually
+    window.contentArea.cursor = Vector2.new(
+        window.contentArea.cursor.X,
+        window.contentArea.cursor.Y + buttonHeight + ImGui.style.itemSpacing.Y
+    )
     
     -- Check for interactions
     local isHovered = ImGui.mouse.position.X >= button.AbsolutePosition.X and
@@ -520,15 +567,15 @@ function ImGui.Button(label, width)
     
     if isHovered then
         ImGui.hoveredItem = buttonId
-        button.BackgroundColor3 = ImGui.style.buttonHoverColor
+        button.BackgroundColor3 = Color3.fromRGB(150, 150, 255) -- Lighter blue for hover
     else
-        button.BackgroundColor3 = ImGui.style.buttonColor
+        button.BackgroundColor3 = Color3.fromRGB(100, 100, 255) -- Default blue
     end
     
     local isClicked = isHovered and ImGui.mouse.leftPressed
     if isClicked then
         ImGui.activeItem = buttonId
-        button.BackgroundColor3 = ImGui.style.buttonActiveColor
+        button.BackgroundColor3 = Color3.fromRGB(200, 200, 255) -- Even lighter for click
     end
     
     return isClicked
