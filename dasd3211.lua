@@ -342,7 +342,7 @@ function ImGui.Begin(title, x, y, width, height)
             end
         end)
         
-        -- Create content frame
+        -- Create content frame with ClipsDescendants
         window.contentFrame = createInstance("Frame", {
             Name = "ContentFrame",
             Position = UDim2.new(0, ImGui.style.windowPadding.X, 0, 30 + ImGui.style.windowPadding.Y),
@@ -352,27 +352,25 @@ function ImGui.Begin(title, x, y, width, height)
             ),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
-            ClipsDescendants = true,  -- Important: clip content to frame bounds
+            ClipsDescendants = true,
             Parent = window.instance
         })
-        
-        -- Initialize content cursor
-        window.contentArea.cursor = Vector2.new(0, 0)
         
         -- Add window to list
         table.insert(ImGui.windows, window)
     else
-        -- Clear existing content for redraw
+        -- IMPORTANT: Clear ALL existing content for redraw to prevent duplication
         for _, child in ipairs(window.contentFrame:GetChildren()) do
             child:Destroy()
         end
-        
-        -- Reset content cursor
-        window.contentArea.cursor = Vector2.new(0, 0)
     end
+    
+    -- ALWAYS reset content cursor when beginning a window
+    window.contentArea.cursor = Vector2.new(0, 0)
     
     -- Make this window the active window
     ImGui.activeWindow = window
+    ImGui.BringWindowToFront(window)
     
     return true
 end
@@ -427,7 +425,7 @@ function ImGui.AddItem(item, width, height)
         window.contentArea.cursor.Y
     )
     
-    -- Set position and parent
+    -- Set position and parent to window content frame
     item.Position = UDim2.new(0, itemPosition.X, 0, itemPosition.Y)
     item.Parent = window.contentFrame
     
