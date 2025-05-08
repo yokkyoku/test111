@@ -284,11 +284,6 @@ end
             ClipsDescendants = true,
         }, Tab)
 
-        local UIListLayout = library:create("UIListLayout", {
-            FillDirection = Enum.FillDirection.Horizontal,
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-        }, TabSections)
-
         local TabFrames = library:create("Frame", {
             Name = "TabFrames",
             BackgroundTransparency = 1,
