@@ -377,7 +377,7 @@ end
             }, SectionButton)
 
             local UIGradient = library:create("UIGradient", {
-                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 2, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 1, 0))},
+                Color = Color3.fromRGB(255, 0, 0)
             })
 
             local SectionFrame = library:create("Frame", {
@@ -888,15 +888,7 @@ end
 
                             local UIGradient = library:create("UIGradient", {
                                 Rotation = 90,
-                                Color = ColorSequence.new {
-                                    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
-                                    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 1, 0)),
-                                    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 2, 0)),
-                                    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 3, 0)),
-                                    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(255, 4, 0)),
-                                    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 5, 0)),
-                                    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 6, 0))
-                                }
+                                Color = Color3.fromRGB(255, 0, 0)
                             }, HuePicker)
 
                             local HuePick = library:create("ImageButton", {
