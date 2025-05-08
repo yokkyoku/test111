@@ -346,7 +346,7 @@ end
                 Size = UDim2.new(1/num_sections, 0, 1, 0),
                 Font = Enum.Font.Ubuntu,
                 Text = section_name,
-                TextColor3 = Color3.fromRGB(100, 100, 100),
+                TextColor3 = Color3.fromRGB(255, 0, 0),
                 TextSize = 15,
             }, TabSections)
 
@@ -369,7 +369,7 @@ end
 
             local SectionDecoration = library:create("Frame", {
                 Name = "SectionDecoration",
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                BackgroundColor3 = Color3.fromRGB(255, 0, 0),
                 BorderSizePixel = 0,
                 Position = UDim2.new(0, 0, 0, 27),
                 Size = UDim2.new(1, 0, 0, 1),
@@ -416,7 +416,7 @@ end
             SectionButton.MouseButton1Down:Connect(function()
                 for _,SectionButtons in pairs (TabSections:GetChildren()) do
                     if SectionButtons:IsA("UIListLayout") then continue end
-                    library:tween(SectionButtons, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(100, 100, 100)})
+                    library:tween(SectionButtons, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 0, 0)})
                     SectionButtons.SectionDecoration.Visible = false
                 end
                 for _,TabFrame in pairs (TabFrames:GetChildren()) do
@@ -427,7 +427,7 @@ end
 
                 selected_section = SectionButton
                 SectionFrame.Visible = true
-                library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
+                library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 0, 0)})
                 SectionDecoration.Visible = true
             end)
 
@@ -435,7 +435,7 @@ end
                 is_first_section = false
                 selected_section = SectionButton
 
-                SectionButton.TextColor3 = Color3.fromRGB(84, 101, 255) 
+                SectionButton.TextColor3 = Color3.fromRGB(255, 0, 0) 
     
                 SectionDecoration.Visible = true
                 SectionFrame.Visible = true
