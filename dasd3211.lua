@@ -379,10 +379,16 @@ function library.new(library_title, cfg_location)
                 SectionFrame.Visible = true
             end
 
+            -- Store these in the section table to access them later
+            section._left = Left
+            section._right = Right
+            section._name = section_name
+            section._tab = tab
+
             section.new_sector = function(sector_name, sector_side)
                 local sector = {}
-                local actual_side = sector_side == "Right" and Right or Left
-                menu.values[tab.tab_num][section_name][sector_name] = {}
+                local actual_side = sector_side == "Right" and section._right or section._left
+                menu.values[section._tab.tab_num][section._name][sector_name] = {}
 
                 local Border = library:create("Frame", {
                     BackgroundColor3 = Color3.fromRGB(5, 5, 5),
@@ -444,10 +450,10 @@ function library.new(library_title, cfg_location)
 
                     local value = {}
                     local flag = c_flag and text.." "..c_flag or text
-                    menu.values[tab.tab_num][section_name][sector_name][flag] = value
+                    menu.values[section._tab.tab_num][section._name][sector_name][flag] = value
 
                     local function do_callback()
-                        menu.values[tab.tab_num][section_name][sector_name][flag] = value
+                        menu.values[section._tab.tab_num][section._name][sector_name][flag] = value
                         callback(value)
                     end
 
@@ -501,7 +507,7 @@ function library.new(library_title, cfg_location)
                         local mouse_in = false
                         function element:set_value(new_value, cb)
                             value = new_value and new_value or value
-                            menu.values[tab.tab_num][section_name][sector_name][flag] = value
+                            menu.values[section._tab.tab_num][section._name][sector_name][flag] = value
 
                             if value.Toggle then
                                 library:tween(ToggleFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(84, 101, 255)})
@@ -661,7 +667,7 @@ function library.new(library_title, cfg_location)
                                         extra_value.Active = true
                                     end
                                     key_callback(extra_value)
-                                    menu.values[tab.tab_num][section_name][sector_name][extra_flag] = extra_value
+                                    menu.values[section._tab.tab_num][section._name][sector_name][extra_flag] = extra_value
 
                                     for _,TypeButton2 in next, KeybindFrame:GetChildren() do
                                         if TypeButton2:IsA("UIListLayout") then continue end
@@ -688,7 +694,7 @@ function library.new(library_title, cfg_location)
                                     end
 
                                     key_callback(extra_value)
-                                    menu.values[tab.tab_num][section_name][sector_name][extra_flag] = extra_value
+                                    menu.values[section._tab.tab_num][section._name][sector_name][extra_flag] = extra_value
                                 elseif extra_value.Key ~= nil then
                                     local key = input.KeyCode.Name ~= "Unknown" and input.KeyCode.Name or input.UserInputType.Name
                                     if key == extra_value.Key then
@@ -698,7 +704,7 @@ function library.new(library_title, cfg_location)
                                             extra_value.Active = true
                                         end
                                         key_callback(extra_value)
-                                        menu.values[tab.tab_num][section_name][sector_name][extra_flag] = extra_value
+                                        menu.values[section._tab.tab_num][section._name][sector_name][extra_flag] = extra_value
                                     end
                                 end
                             end)
@@ -710,7 +716,7 @@ function library.new(library_title, cfg_location)
                                         if extra_value.Type == "Hold" then
                                             extra_value.Active = false
                                             key_callback(extra_value)
-                                            menu.values[tab.tab_num][section_name][sector_name][extra_flag] = extra_value
+                                            menu.values[section._tab.tab_num][section._name][sector_name][extra_flag] = extra_value
                                         end
                                     end
                                 end
@@ -733,7 +739,7 @@ function library.new(library_title, cfg_location)
 
                             function keybind:set_value(new_value, cb)
                                 extra_value = new_value and new_value or extra_value
-                                menu.values[tab.tab_num][section_name][sector_name][extra_flag] = extra_value
+                                menu.values[section._tab.tab_num][section._name][sector_name][extra_flag] = extra_value
     
                                 for _,TypeButton2 in next, KeybindFrame:GetChildren() do
                                     if TypeButton2:IsA("UIListLayout") then continue end
@@ -756,7 +762,7 @@ function library.new(library_title, cfg_location)
                             keybind:set_value(key_default, true)
 
                             menu.on_load_cfg:Connect(function()
-                                keybind:set_value(menu.values[tab.tab_num][section_name][sector_name][extra_flag])
+                                keybind:set_value(menu.values[section._tab.tab_num][section._name][sector_name][extra_flag])
                             end)
 
                             return keybind
@@ -1020,7 +1026,7 @@ function library.new(library_title, cfg_location)
                 
                 menu.on_load_cfg:Connect(function()
                     if type ~= "Button" and type ~= "Scroll" then
-                        element:set_value(menu.values[tab.tab_num][section_name][sector_name][flag])
+                        element:set_value(menu.values[section._tab.tab_num][section._name][sector_name][flag])
                     end
                 end)
 
@@ -1159,7 +1165,7 @@ function library.new(library_title, cfg_location)
 
         function element:set_value(new_value, cb)
             value = new_value and new_value or value
-            menu.values[tab.tab_num][section_name][sector_name][flag] = value
+            menu.values[section._tab.tab_num][section._name][sector_name][flag] = value
 
             DropdownButtonText.Text = new_value.Dropdown
 
@@ -1366,7 +1372,7 @@ function library.new(library_title, cfg_location)
 
         function element:set_value(new_value, cb)
             value = new_value and new_value or value
-            menu.values[tab.tab_num][section_name][sector_name][flag] = value
+            menu.values[section._tab.tab_num][section._name][sector_name][flag] = value
 
             local new_size = (value.Slider - min) / (max-min)
             SliderFrame.Size = UDim2.new(new_size, 0, 1, 0)
