@@ -118,7 +118,7 @@ function library.new(library_title, cfg_location)
                 for _3,sector in next, section do
                     for _4,element in next, sector do
                         if element.Color then
-                            element.Color = Color3.new(255, 0, 0)
+                            element.Color = Color3.new(element.Color.R, element.Color.G, element.Color.B)
                         end
 
                         pcall(function()
@@ -284,6 +284,11 @@ end
             ClipsDescendants = true,
         }, Tab)
 
+        local UIListLayout = library:create("UIListLayout", {
+            FillDirection = Enum.FillDirection.Horizontal,
+            HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        }, TabSections)
+
         local TabFrames = library:create("Frame", {
             Name = "TabFrames",
             BackgroundTransparency = 1,
@@ -362,6 +367,19 @@ end
                 library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(100, 100, 100)})
             end)
 
+            local SectionDecoration = library:create("Frame", {
+                Name = "SectionDecoration",
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                BorderSizePixel = 0,
+                Position = UDim2.new(0, 0, 0, 27),
+                Size = UDim2.new(1, 0, 0, 1),
+                Visible = false,
+            }, SectionButton)
+
+            local UIGradient = library:create("UIGradient", {
+                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))},
+            }, SectionDecoration)
+
             local SectionFrame = library:create("Frame", {
                 Name = "SectionFrame",
                 BackgroundTransparency = 1,
@@ -399,6 +417,7 @@ end
                 for _,SectionButtons in pairs (TabSections:GetChildren()) do
                     if SectionButtons:IsA("UIListLayout") then continue end
                     library:tween(SectionButtons, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(100, 100, 100)})
+                    SectionButtons.SectionDecoration.Visible = false
                 end
                 for _,TabFrame in pairs (TabFrames:GetChildren()) do
                     if not TabFrame:IsA("Frame") then continue end
@@ -409,6 +428,7 @@ end
                 selected_section = SectionButton
                 SectionFrame.Visible = true
                 library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 0, 0)})
+                SectionDecoration.Visible = true
             end)
 
             if is_first_section then
@@ -417,6 +437,7 @@ end
 
                 SectionButton.TextColor3 = Color3.fromRGB(255, 0, 0) 
     
+                SectionDecoration.Visible = true
                 SectionFrame.Visible = true
             end
 
@@ -459,6 +480,27 @@ end
                     TextColor3 = Color3.fromRGB(255, 255, 255),
                     TextSize = 14,
                 }, Border)
+
+                function sector.create_line(thickness)
+                    thickness = thickness or 3
+                    Border.Size = Border.Size + UDim2.new(0, 0, 0, thickness * 3)
+
+                    local LineFrame = library:create("Frame", {
+                        Name = "LineFrame",
+                        BackgroundTransparency = 1,
+                        Position = UDim2.new(0, 0, 0, 0),
+                        Size = UDim2.new(0, 250, 0, thickness * 3),
+                    }, Container)
+
+                    local Line = library:create("Frame", {
+                        Name = "Line",
+                        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+                        BorderColor3 = Color3.fromRGB(0, 0, 0),
+                        Position = UDim2.new(0.5, 0, 0.5, 0),
+                        AnchorPoint = Vector2.new(0.5, 0.5),
+                        Size = UDim2.new(1, 0, 0, thickness),
+                    }, LineFrame)
+                end
 
                 function sector.element(type, text, data, callback, c_flag)
                     text, data, callback = text and text or type, data and data or {}, callback and callback or function() end
@@ -844,6 +886,18 @@ end
                                 Text = "",
                             }, ColorFrame)
 
+                            local UIGradient = library:create("UIGradient", {
+                                Rotation = 90,
+                                Color = ColorSequence.new {
+                                    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+                                    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 0, 255)),
+                                    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 0, 255)),
+                                    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
+                                    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 255, 0)),
+                                    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 255, 0)),
+                                    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0))
+                                }
+                            }, HuePicker)
 
                             local HuePick = library:create("ImageButton", {
                                 Name = "HuePick",
@@ -1886,6 +1940,11 @@ end
                             BorderSizePixel = 0,
                             Size = UDim2.new(0, 100, 1, 0),
                         }, SliderButton)
+
+                        local UIGradient = library:create("UIGradient", {
+                            Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(56, 67, 163))},
+                            Rotation = 90,
+                        }, SliderFrame)
 
                         local SliderValue = library:create("TextLabel", {
                             Name = "SliderValue",
