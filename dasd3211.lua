@@ -94,6 +94,12 @@ end
 function ImGui.Init(options)
     options = options or {}
     
+    -- Clear any existing windows first to prevent duplicates
+    if ImGui.ScreenGui then
+        ImGui.ScreenGui:Destroy()
+        ImGui.windows = {}
+    end
+    
     -- Create parent ScreenGui with proper error handling
     local screenGui
     
@@ -129,33 +135,38 @@ function ImGui.Init(options)
     ImGui.ScreenGui = screenGui
     
     -- Setup input handling - simple implementation to avoid performance issues
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    -- Disconnect previous connections if they exist
+    if ImGui.connections then
+        for _, connection in pairs(ImGui.connections) do
+            connection:Disconnect()
+        end
+    end
+    
+    ImGui.connections = {}
+    
+    -- Create new connections
+    table.insert(ImGui.connections, UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             ImGui.mouse.leftPressed = true
             ImGui.mouse.leftDown = true
         end
-    end)
+    end))
     
-    UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    table.insert(ImGui.connections, UserInputService.InputEnded:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             ImGui.mouse.leftReleased = true
             ImGui.mouse.leftDown = false
         end
-    end)
+    end))
     
     -- Only update mouse position on movement to reduce overhead
-    UserInputService.InputChanged:Connect(function(input, gameProcessed)
+    table.insert(ImGui.connections, UserInputService.InputChanged:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             ImGui.mouse.position = Vector2.new(input.Position.X, input.Position.Y)
         end
-    end)
-    
-    -- Main render loop - using heartbeat for fewer calls
-    RunService.Heartbeat:Connect(function()
-        ImGui.NewFrame()
-    end)
+    end))
     
     -- Debug mode option
     ImGui.debugMode = options.debugMode or false
@@ -170,7 +181,7 @@ function ImGui.Init(options)
     return ImGui
 end
 
--- Begin a new frame
+-- Begin a new frame - no automatic rendering, just input processing
 function ImGui.NewFrame()
     -- Reset frame state
     ImGui.hoveredItem = nil
@@ -178,18 +189,6 @@ function ImGui.NewFrame()
     -- Clear flags from previous frame
     ImGui.mouse.leftPressed = false
     ImGui.mouse.leftReleased = false
-    
-    -- Clean up existing UI elements in content frames to avoid duplicates
-    for _, window in ipairs(ImGui.windows) do
-        if window.instance and window.contentFrame then
-            -- Clear all non-essential UI elements before redrawing
-            for _, child in ipairs(window.contentFrame:GetChildren()) do
-                child:Destroy()
-            end
-            -- Reset content cursor for fresh layout
-            window.contentArea.cursor = Vector2.new(0, 0)
-        end
-    end
     
     -- Process window interactions
     for _, window in ipairs(ImGui.windows) do
@@ -206,12 +205,8 @@ function ImGui.NewFrame()
             if window.dragging and not ImGui.mouse.leftDown then
                 window.dragging = false
             elseif window.dragging then
-                -- Fix window dragging movement
-                local newPosX = ImGui.mouse.position.X - window.dragOffset.X
-                local newPosY = ImGui.mouse.position.Y - window.dragOffset.Y
-                
-                -- Direct position change instead of tween for performance
-                window.instance.Position = UDim2.new(0, newPosX, 0, newPosY)
+                -- Fix window dragging movement - direct change for performance
+                window.instance.Position = UDim2.new(0, ImGui.mouse.position.X - window.dragOffset.X, 0, ImGui.mouse.position.Y - window.dragOffset.Y)
             elseif ImGui.mouse.leftPressed and mouseInWindow then
                 -- Check if click is in title bar
                 local titleBarHeight = 30
