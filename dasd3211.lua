@@ -1233,12 +1233,11 @@ function ImGui.Spacing(height)
     local window = ImGui.activeWindow
     if not window then return end
     
-    height = height or ImGui.style.itemSpacing.Y * 2
+    height = height or ImGui.style.itemSpacing.Y
     
-    -- Update cursor position
-    window.contentArea.cursor = Vector2.new(
-        window.contentArea.cursor.X,
-        window.contentArea.cursor.Y + height
+    window.cursorPos = Vector2.new(
+        window.cursorPos.X,
+        window.cursorPos.Y + height
     )
 end
 
@@ -1266,9 +1265,13 @@ function ImGui.SameLine(offsetX)
     local window = ImGui.activeWindow
     if not window then return end
     
-    -- Save Y position and move X position
-    local xPos = window.contentArea.cursor.X + (offsetX or ImGui.style.itemSpacing.X)
-    window.contentArea.cursor = Vector2.new(xPos, window.contentArea.cursor.Y - ImGui.style.itemSpacing.Y)
+    -- Set flag to position next item on same line
+    window.sameLine = true
+    
+    -- Update cursor position if offsetX provided
+    if offsetX then
+        window.cursorPos = Vector2.new(offsetX, window.cursorPos.Y)
+    end
 end
 
 -- Shutdown function - очищает все соединения и ресурсы
