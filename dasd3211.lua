@@ -30,10 +30,10 @@ local ImGui = {
         windowRounding = 4,
         frameRounding = 4,
         
-        -- Performance options
-        useGradients = false,  -- Disable gradients for better performance
-        useAnimations = true,  -- Can disable animations for better performance
-        animationSpeed = 0.1,  -- Faster animations (was 0.2)
+        -- Performance options - everything off by default to avoid lag
+        useGradients = false,
+        useAnimations = false,
+        animationSpeed = 0.05,
     },
     
     -- UI element IDs
@@ -52,7 +52,10 @@ local ImGui = {
         leftPressed = false,
         leftReleased = false,
         leftDown = false
-    }
+    },
+
+    -- Debug
+    debugMode = false
 }
 
 -- Services
@@ -92,97 +95,76 @@ function ImGui.Init(options)
     options = options or {}
     
     -- Create parent ScreenGui with proper error handling
-    local success, screenGui
+    local screenGui
     
-    -- Try to place in CoreGui first (works in exploits), but fallback to PlayerGui
-    success, screenGui = pcall(function()
-        local gui = createInstance("ScreenGui", {
+    local playerGui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
+    if playerGui then
+        screenGui = createInstance("ScreenGui", {
             Name = "ImGuiScreenGui",
             ResetOnSpawn = false,
             ZIndexBehavior = Enum.ZIndexBehavior.Global,
             DisplayOrder = 999,
             IgnoreGuiInset = true,
-            Parent = CoreGui
+            Parent = playerGui
         })
-        return gui
-    end)
-    
-    -- If failed, try PlayerGui instead
-    if not success then
-        local playerGui = LOCAL_PLAYER:FindFirstChild("PlayerGui")
-        if playerGui then
-            screenGui = createInstance("ScreenGui", {
-                Name = "ImGuiScreenGui",
-                ResetOnSpawn = false,
-                ZIndexBehavior = Enum.ZIndexBehavior.Global,
-                DisplayOrder = 999,
-                IgnoreGuiInset = true,
-                Parent = playerGui
-            })
-        else
-            -- Last resort: parent to game.Workspace
-            screenGui = createInstance("ScreenGui", {
-                Name = "ImGuiScreenGui",
-                ResetOnSpawn = false,
-                ZIndexBehavior = Enum.ZIndexBehavior.Global,
-                DisplayOrder = 999,
-                IgnoreGuiInset = true
-            })
-            screenGui.Parent = game.Workspace
+    else
+        screenGui = createInstance("ScreenGui", {
+            Name = "ImGuiScreenGui",
+            ResetOnSpawn = false,
+            ZIndexBehavior = Enum.ZIndexBehavior.Global,
+            DisplayOrder = 999,
+            IgnoreGuiInset = true
+        })
+        
+        -- Try to place it safely
+        local success = pcall(function()
+            screenGui.Parent = CoreGui
+        end)
+        
+        if not success then
+            screenGui.Parent = game:GetService("StarterGui")
         end
     end
     
     ImGui.ScreenGui = screenGui
     
-    -- Setup input handling
-    UserInputService.InputBegan:Connect(function(input)
+    -- Setup input handling - simple implementation to avoid performance issues
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             ImGui.mouse.leftPressed = true
             ImGui.mouse.leftDown = true
         end
     end)
     
-    UserInputService.InputEnded:Connect(function(input)
+    UserInputService.InputEnded:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             ImGui.mouse.leftReleased = true
             ImGui.mouse.leftDown = false
         end
     end)
     
-    UserInputService.InputChanged:Connect(function(input)
+    -- Only update mouse position on movement to reduce overhead
+    UserInputService.InputChanged:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
             ImGui.mouse.position = Vector2.new(input.Position.X, input.Position.Y)
         end
     end)
     
-    -- Main render loop
-    RunService.RenderStepped:Connect(function()
+    -- Main render loop - using heartbeat for fewer calls
+    RunService.Heartbeat:Connect(function()
         ImGui.NewFrame()
     end)
     
-    -- Custom cursor is now optional (default: false)
-    ImGui.useCustomCursor = options.useCustomCursor or false
+    -- Debug mode option
+    ImGui.debugMode = options.debugMode or false
     
-    if ImGui.useCustomCursor then
-        -- Hide default cursor
-        UserInputService.MouseIconEnabled = false
-        
-        -- Create custom cursor
-        ImGui.cursor = createInstance("ImageLabel", {
-            Name = "ImGuiCursor",
-            BackgroundTransparency = 1,
-            Size = UDim2.new(0, 24, 0, 24),
-            Image = "rbxassetid://6302464334",
-            ZIndex = 9999,
-            Parent = ImGui.ScreenGui
-        })
-        
-        -- Update cursor position
-        RunService.RenderStepped:Connect(function()
-            if ImGui.cursor and ImGui.cursor.Parent then
-                ImGui.cursor.Position = UDim2.new(0, ImGui.mouse.position.X, 0, ImGui.mouse.position.Y)
-            end
-        end)
+    -- Load config options
+    if options.style then
+        for key, value in pairs(options.style) do
+            ImGui.style[key] = value
+        end
     end
     
     return ImGui
@@ -212,14 +194,15 @@ function ImGui.NewFrame()
             if window.dragging and not ImGui.mouse.leftDown then
                 window.dragging = false
             elseif window.dragging then
-                local newPos = UDim2.new(
-                    0, ImGui.mouse.position.X - window.dragOffset.X,
-                    0, ImGui.mouse.position.Y - window.dragOffset.Y
-                )
-                window.instance.Position = newPos
+                -- Fix window dragging movement
+                local newPosX = ImGui.mouse.position.X - window.dragOffset.X
+                local newPosY = ImGui.mouse.position.Y - window.dragOffset.Y
+                
+                -- Direct position change instead of tween for performance
+                window.instance.Position = UDim2.new(0, newPosX, 0, newPosY)
             elseif ImGui.mouse.leftPressed and mouseInWindow then
                 -- Check if click is in title bar
-                local titleBarHeight = 30 -- Updated from 28 to match new titlebar height
+                local titleBarHeight = 30
                 if ImGui.mouse.position.Y < windowPos.Y.Offset + titleBarHeight then
                     window.dragging = true
                     window.dragOffset = Vector2.new(
@@ -227,7 +210,6 @@ function ImGui.NewFrame()
                         ImGui.mouse.position.Y - windowPos.Y.Offset
                     )
                     
-                    -- Make this window active
                     if ImGui.activeWindow ~= window then
                         ImGui.BringWindowToFront(window)
                     end
@@ -268,60 +250,34 @@ function ImGui.Begin(title, x, y, width, height)
             children = {}
         }
         
-        -- Create window UI with improved styling
+        -- Create ultra-simplified window UI with minimal objects
         window.instance = createInstance("Frame", {
             Name = "ImGuiWindow_" .. title,
             Position = UDim2.new(0, window.position.X, 0, window.position.Y),
             Size = UDim2.new(0, window.size.X, 0, window.size.Y),
             BackgroundColor3 = ImGui.style.windowBgColor,
-            BorderSizePixel = 0, -- No border, we'll use UICorner for rounding
+            BorderSizePixel = 1,
+            BorderColor3 = ImGui.style.windowBorderColor,
             Parent = ImGui.ScreenGui
         })
         
-        -- Add corner rounding
-        createInstance("UICorner", {
-            CornerRadius = UDim.new(0, ImGui.style.windowRounding),
-            Parent = window.instance
-        })
-        
-        -- Add subtle shadow effect if not disabled for performance
-        if ImGui.style.useGradients then
-            -- Simplified shadow approach - just a stroke
-            createInstance("UIStroke", {
-                Color = Color3.fromRGB(0, 0, 0),
-                Thickness = 2,
-                Transparency = 0.7,
+        -- Add corner rounding only if needed
+        if ImGui.style.windowRounding > 0 then
+            createInstance("UICorner", {
+                CornerRadius = UDim.new(0, ImGui.style.windowRounding),
                 Parent = window.instance
             })
         end
         
-        -- Create title bar with gradient
+        -- Simple title bar without gradients or effects
         window.titleBar = createInstance("Frame", {
             Name = "TitleBar",
             Position = UDim2.new(0, 0, 0, 0),
-            Size = UDim2.new(1, 0, 0, 30), -- Slightly taller
+            Size = UDim2.new(1, 0, 0, 30),
             BackgroundColor3 = ImGui.style.titleBarColor,
             BorderSizePixel = 0,
             Parent = window.instance
         })
-        
-        -- Round top corners only
-        createInstance("UICorner", {
-            CornerRadius = UDim.new(0, ImGui.style.windowRounding),
-            Parent = window.titleBar
-        })
-        
-        -- Add gradient to title bar if gradients enabled
-        if ImGui.style.useGradients then
-            createInstance("UIGradient", {
-                Transparency = NumberSequence.new({
-                    NumberSequenceKeypoint.new(0, 0),
-                    NumberSequenceKeypoint.new(1, 0.2)
-                }),
-                Rotation = 90,
-                Parent = window.titleBar
-            })
-        end
         
         -- Create title text with better spacing
         window.titleText = createInstance("TextLabel", {
@@ -331,13 +287,13 @@ function ImGui.Begin(title, x, y, width, height)
             BackgroundTransparency = 1,
             Text = title,
             TextColor3 = ImGui.style.titleTextColor,
-            TextSize = ImGui.font.size + 2, -- Slightly larger title text
+            TextSize = ImGui.font.size + 2,
             Font = ImGui.font.bold,
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = window.titleBar
         })
         
-        -- Create stylish close button
+        -- Simplified close button without effects
         window.closeButton = createInstance("TextButton", {
             Name = "CloseButton",
             Position = UDim2.new(1, -30, 0, 0),
@@ -350,7 +306,7 @@ function ImGui.Begin(title, x, y, width, height)
             Parent = window.titleBar
         })
         
-        -- Close button hover effect - direct color change instead of animation for performance
+        -- Close button simple hover effect - no animations
         window.closeButton.MouseEnter:Connect(function()
             window.closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
         end)
@@ -364,7 +320,6 @@ function ImGui.Begin(title, x, y, width, height)
             window.instance:Destroy()
             window.instance = nil
             
-            -- Remove window from windows list
             for i, w in ipairs(ImGui.windows) do
                 if w.id == window.id then
                     table.remove(ImGui.windows, i)
@@ -373,8 +328,8 @@ function ImGui.Begin(title, x, y, width, height)
             end
         end)
         
-        -- Create content area with improved styling
-        window.contentFrame = createInstance("ScrollingFrame", {
+        -- Simple content frame without scrolling for better performance
+        window.contentFrame = createInstance("Frame", {
             Name = "ContentFrame",
             Position = UDim2.new(0, ImGui.style.windowPadding.X, 0, 30 + ImGui.style.windowPadding.Y),
             Size = UDim2.new(
@@ -383,9 +338,6 @@ function ImGui.Begin(title, x, y, width, height)
             ),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
-            ScrollBarThickness = ImGui.style.scrollbarSize,
-            ScrollBarImageColor3 = ImGui.style.borderColor,
-            CanvasSize = UDim2.new(0, 0, 0, 0),
             Parent = window.instance
         })
         
@@ -407,18 +359,13 @@ end
 function ImGui.End()
     local window = ImGui.activeWindow
     if window then
-        -- Update content canvas size
-        window.contentFrame.CanvasSize = UDim2.new(
-            0, 0, 
-            0, window.contentArea.cursor.Y + ImGui.style.windowPadding.Y
-        )
-        
-        -- Clear active window
+        -- No need to update canvas size since we're not using ScrollingFrame anymore
+        -- Just clear active window
         ImGui.activeWindow = nil
     end
 end
 
--- Bring a window to the front
+-- Simpler bring to front function that just sets ZIndex
 function ImGui.BringWindowToFront(window)
     -- Find the highest ZIndex among all windows
     local highestZIndex = 0
@@ -428,27 +375,16 @@ function ImGui.BringWindowToFront(window)
         end
     end
     
-    -- Set this window's ZIndex higher
+    -- Set this window's ZIndex higher - only on main instances
     window.instance.ZIndex = highestZIndex + 1
     
-    -- List of classes that support ZIndex property
-    local zIndexSupportedClasses = {
-        ["Frame"] = true,
-        ["ImageLabel"] = true,
-        ["ImageButton"] = true,
-        ["TextLabel"] = true,
-        ["TextButton"] = true,
-        ["TextBox"] = true,
-        ["ScrollingFrame"] = true,
-        ["CanvasGroup"] = true,
-        ["ViewportFrame"] = true,
-    }
+    -- Basic descendant ZIndex adjustment to avoid most issues
+    if window.titleBar then
+        window.titleBar.ZIndex = highestZIndex + 2
+    end
     
-    -- Adjust child elements' ZIndex (only for element classes that support ZIndex)
-    for _, child in ipairs(window.instance:GetDescendants()) do
-        if zIndexSupportedClasses[child.ClassName] then
-            child.ZIndex = child.ZIndex + highestZIndex
-        end
+    if window.contentFrame then
+        window.contentFrame.ZIndex = highestZIndex + 2
     end
 end
 
