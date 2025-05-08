@@ -377,7 +377,7 @@ end
             }, SectionButton)
 
             local UIGradient = library:create("UIGradient", {
-                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(81, 97, 243)), ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))},
+                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(81, 97, 243)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 1, 0))},
             }, SectionDecoration)
 
             local SectionFrame = library:create("Frame", {
@@ -890,12 +890,12 @@ end
                                 Rotation = 90,
                                 Color = ColorSequence.new {
                                     ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
-                                    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 0, 255)),
-                                    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 0, 255)),
-                                    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
-                                    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 255, 0)),
-                                    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 255, 0)),
-                                    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0))
+                                    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 1, 0)),
+                                    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 2, 0)),
+                                    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 3, 0)),
+                                    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(255, 4, 0)),
+                                    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 5, 0)),
+                                    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 6, 0))
                                 }
                             }, HuePicker)
 
@@ -1942,7 +1942,7 @@ end
                         }, SliderButton)
 
                         local UIGradient = library:create("UIGradient", {
-                            Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(79, 95, 239)), ColorSequenceKeypoint.new(1, Color3.fromRGB(56, 67, 163))},
+                            Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 1, 0))},
                             Rotation = 90,
                         }, SliderFrame)
 
