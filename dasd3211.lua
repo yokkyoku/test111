@@ -132,7 +132,7 @@ function library.new(library_title, cfg_location)
         end
     end)
 
-    local ImageLabel = library:create("ImageButton", {
+    local ImageLabel = library:create("ImageLabel", {
         Name = "Main",
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = Color3.fromRGB(15, 15, 15),
@@ -198,7 +198,8 @@ function library.new(library_title, cfg_location)
     local selected_tab
     local tab_num = 1
     function menu.new_tab(tab_image)
-        local tab = {tab_num = tab_num}
+        local tab = {}
+        tab.tab_num = tab_num
         menu.values[tab_num] = {}
         tab_num = tab_num + 1
 
@@ -211,7 +212,7 @@ function library.new(library_title, cfg_location)
         local TabImage = library:create("ImageLabel", {
             AnchorPoint = Vector2.new(0.5, 0.5),
             BackgroundTransparency = 1,
-            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Position = UDim2.new(0.5, 0.5, 0.5, 0),
             Size = UDim2.new(0, 32, 0, 32),
             Image = tab_image,
             ImageColor3 = Color3.fromRGB(100, 100, 100),
@@ -279,10 +280,10 @@ function library.new(library_title, cfg_location)
         local num_sections = 0
         local selected_section
         
-        tab.new_section = function(section_name)
+        function tab:new_section(section_name)
             local section = {}
             num_sections += 1
-            menu.values[tab.tab_num][section_name] = {}
+            menu.values[self.tab_num][section_name] = {}
 
             local SectionButton = library:create("TextButton", {
                 Name = "SectionButton",
@@ -384,7 +385,7 @@ function library.new(library_title, cfg_location)
             section._left = Left
             section._right = Right
             section._name = section_name
-            section._tab = tab
+            section._tab = self -- Use self instead of tab to correctly reference the tab object
 
             section.new_sector = function(sector_name, sector_side)
                 local sector = {}
