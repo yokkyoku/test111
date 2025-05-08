@@ -83,7 +83,9 @@ local function calculateTextSize(text, fontSize, font)
 end
 
 -- Initialize the ImGui system
-function ImGui.Init()
+function ImGui.Init(options)
+    options = options or {}
+    
     -- Create parent ScreenGui with proper error handling
     local success, screenGui
     
@@ -153,23 +155,30 @@ function ImGui.Init()
         ImGui.NewFrame()
     end)
     
-    -- Hide default cursor
-    UserInputService.MouseIconEnabled = false
+    -- Custom cursor is now optional (default: false)
+    ImGui.useCustomCursor = options.useCustomCursor or false
     
-    -- Create custom cursor
-    ImGui.cursor = createInstance("ImageLabel", {
-        Name = "ImGuiCursor",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(0, 24, 0, 24),
-        Image = "rbxassetid://6302464334",
-        ZIndex = 9999,
-        Parent = ImGui.ScreenGui
-    })
-    
-    -- Update cursor position
-    RunService.RenderStepped:Connect(function()
-        ImGui.cursor.Position = UDim2.new(0, ImGui.mouse.position.X, 0, ImGui.mouse.position.Y)
-    end)
+    if ImGui.useCustomCursor then
+        -- Hide default cursor
+        UserInputService.MouseIconEnabled = false
+        
+        -- Create custom cursor
+        ImGui.cursor = createInstance("ImageLabel", {
+            Name = "ImGuiCursor",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(0, 24, 0, 24),
+            Image = "rbxassetid://6302464334",
+            ZIndex = 9999,
+            Parent = ImGui.ScreenGui
+        })
+        
+        -- Update cursor position
+        RunService.RenderStepped:Connect(function()
+            if ImGui.cursor and ImGui.cursor.Parent then
+                ImGui.cursor.Position = UDim2.new(0, ImGui.mouse.position.X, 0, ImGui.mouse.position.Y)
+            end
+        end)
+    end
     
     return ImGui
 end
