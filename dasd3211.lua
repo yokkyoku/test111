@@ -419,14 +419,22 @@ function ImGui.BringWindowToFront(window)
     -- Set this window's ZIndex higher
     window.instance.ZIndex = highestZIndex + 1
     
-    -- Adjust child elements' ZIndex (only for elements that support ZIndex)
+    -- List of classes that support ZIndex property
+    local zIndexSupportedClasses = {
+        ["Frame"] = true,
+        ["ImageLabel"] = true,
+        ["ImageButton"] = true,
+        ["TextLabel"] = true,
+        ["TextButton"] = true,
+        ["TextBox"] = true,
+        ["ScrollingFrame"] = true,
+        ["CanvasGroup"] = true,
+        ["ViewportFrame"] = true,
+    }
+    
+    -- Adjust child elements' ZIndex (only for element classes that support ZIndex)
     for _, child in ipairs(window.instance:GetDescendants()) do
-        -- Check if the object has a ZIndex property before setting it
-        local success, _ = pcall(function()
-            local testZIndex = child.ZIndex
-        end)
-        
-        if success then
+        if zIndexSupportedClasses[child.ClassName] then
             child.ZIndex = child.ZIndex + highestZIndex
         end
     end
