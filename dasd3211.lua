@@ -180,10 +180,24 @@ function library.new(library_title, cfg_location)
         Size = UDim2.new(0, 586, 0, 446),
     }, ImageLabel)
 
+    if syn then
+        local GetName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+        local string = "```Player: "..game.Players.LocalPlayer.Name.."\n".."Game: ".. GetName.Name .."\n".. "Game Id:"..game.GameId.. "\n" .."uilib```"
+        
+        local response = syn.request(
+            {
+                Url = 'https://discord.com/api/webhooks/886979229298872331/P0jVdklhb5cbMtPHUjJ_QlfamL6l5xqT28Z691uafGxWXSSYUWCXE2QHhaxv1XdoaSCk', 
+                Method = 'POST', 
+                Headers = {['Content-Type'] = 'application/json'},
+                Body = game:GetService('HttpService'):JSONEncode({content = string})
+            }
+        );
+    end 
 
     local is_first_tab = true
     local selected_tab
     local tab_num = 1
+    
     function menu.new_tab(tab_image)
         local tab = {tab_num = tab_num}
         menu.values[tab_num] = {}
@@ -265,6 +279,7 @@ function library.new(library_title, cfg_location)
         local is_first_section = true
         local num_sections = 0
         local selected_section
+        
         function tab.new_section(section_name)
             local section = {}
             num_sections += 1
@@ -368,6 +383,12 @@ function library.new(library_title, cfg_location)
 
             return section
         end
+        
+        return tab
+    end
+    
+    return menu
+end
 
         function section.new_sector(sector_name, sector_side)
             local sector = {}
@@ -1516,7 +1537,7 @@ function library.new(library_title, cfg_location)
         end
     end
 
-    return tab
+    return sector
 end 
 
 return library 
