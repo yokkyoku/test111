@@ -197,7 +197,6 @@ function library.new(library_title, cfg_location)
     local is_first_tab = true
     local selected_tab
     local tab_num = 1
-    
     function menu.new_tab(tab_image)
         local tab = {tab_num = tab_num}
         menu.values[tab_num] = {}
@@ -279,7 +278,6 @@ function library.new(library_title, cfg_location)
         local is_first_section = true
         local num_sections = 0
         local selected_section
-        
         function tab.new_section(section_name)
             local section = {}
             num_sections += 1
@@ -383,12 +381,6 @@ function library.new(library_title, cfg_location)
 
             return section
         end
-        
-        return tab
-    end
-    
-    return menu
-end
 
         function section.new_sector(sector_name, sector_side)
             local sector = {}
@@ -1537,7 +1529,7 @@ end
         end
     end
 
-    return sector
+    return menu
 end 
 
 return library 
