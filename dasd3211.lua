@@ -259,6 +259,7 @@ function ImGui.Begin(title, x, y, width, height)
             Size = UDim2.new(0, window.size.X, 0, window.size.Y),
             BackgroundColor3 = ImGui.style.windowBgColor,
             BorderSizePixel = 0,
+            ClipsDescendants = false,
             Parent = ImGui.ScreenGui
         })
         
@@ -342,7 +343,7 @@ function ImGui.Begin(title, x, y, width, height)
             end
         end)
         
-        -- Create content frame with ClipsDescendants
+        -- Create content frame with ClipsDescendants = false for debugging
         window.contentFrame = createInstance("Frame", {
             Name = "ContentFrame",
             Position = UDim2.new(0, ImGui.style.windowPadding.X, 0, 30 + ImGui.style.windowPadding.Y),
@@ -350,16 +351,18 @@ function ImGui.Begin(title, x, y, width, height)
                 1, -ImGui.style.windowPadding.X * 2,
                 1, -(30 + ImGui.style.windowPadding.Y * 2)
             ),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ClipsDescendants = true,
+            BackgroundTransparency = 0.9,
+            BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+            BorderSizePixel = 1,
+            BorderColor3 = Color3.fromRGB(255, 0, 0),
+            ClipsDescendants = false,
             Parent = window.instance
         })
         
         -- Add window to list
         table.insert(ImGui.windows, window)
     else
-        -- IMPORTANT: Clear ALL existing content for redraw to prevent duplication
+        -- IMPORTANT: Clear ALL existing content for redraw
         for _, child in ipairs(window.contentFrame:GetChildren()) do
             child:Destroy()
         end
@@ -420,14 +423,26 @@ function ImGui.AddItem(item, width, height)
     local window = ImGui.activeWindow
     if not window then return end
     
+    -- Calculate position for this item
     local itemPosition = Vector2.new(
         window.contentArea.cursor.X,
         window.contentArea.cursor.Y
     )
     
-    -- Set position and parent to window content frame
+    -- FIXED: Make absolutely sure the item is positioned relative to the content frame
     item.Position = UDim2.new(0, itemPosition.X, 0, itemPosition.Y)
+    item.Size = UDim2.new(0, width, 0, height) -- ADDED: Ensure the size is set
+    
+    -- Make item a direct child of the content frame
     item.Parent = window.contentFrame
+    
+    -- Debug border for visibility
+    if ImGui.debugMode then
+        if item:IsA("GuiObject") and item.ClassName ~= "UICorner" and item.ClassName ~= "UIStroke" then
+            item.BorderSizePixel = 1
+            item.BorderColor3 = Color3.fromRGB(0, 255, 0)
+        end
+    end
     
     -- Update cursor position for next item
     window.contentArea.cursor = Vector2.new(
@@ -438,13 +453,15 @@ function ImGui.AddItem(item, width, height)
     return itemPosition
 end
 
--- Text label
+-- Text label - simplified for reliability
 function ImGui.Text(text)
     local window = ImGui.activeWindow
     if not window then return end
     
-    -- Create label element
+    -- Calculate text size
     local textSize = calculateTextSize(text, ImGui.font.size, ImGui.font.regular)
+    
+    -- Create label with fixed size and position
     local label = createInstance("TextLabel", {
         Name = "ImGuiText",
         Size = UDim2.new(0, textSize.X, 0, textSize.Y),
@@ -457,10 +474,11 @@ function ImGui.Text(text)
         TextYAlignment = Enum.TextYAlignment.Center
     })
     
+    -- Add to window content
     ImGui.AddItem(label, textSize.X, textSize.Y)
 end
 
--- Button control
+-- Button control - simplified for reliability
 function ImGui.Button(label, width)
     local window = ImGui.activeWindow
     if not window then return false end
@@ -477,13 +495,12 @@ function ImGui.Button(label, width)
     -- Create button
     local button = createInstance("TextButton", {
         Name = "ImGuiButton_" .. label,
-        Size = UDim2.new(0, buttonWidth, 0, buttonHeight),
         BackgroundColor3 = ImGui.style.buttonColor,
         BorderSizePixel = 0,
         Text = label,
         TextColor3 = ImGui.style.textColor,
         TextSize = ImGui.font.size,
-        Font = ImGui.font.regular
+        Font = ImGui.font.regular,
     })
     
     -- Add rounded corners
@@ -492,7 +509,8 @@ function ImGui.Button(label, width)
         Parent = button
     })
     
-    local position = ImGui.AddItem(button, buttonWidth, buttonHeight)
+    -- Add to window content with explicit size
+    ImGui.AddItem(button, buttonWidth, buttonHeight)
     
     -- Check for interactions
     local isHovered = ImGui.mouse.position.X >= button.AbsolutePosition.X and
