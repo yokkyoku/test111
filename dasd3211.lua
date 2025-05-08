@@ -372,7 +372,7 @@ end
                 BackgroundColor3 = Color3.fromRGB(255, 0, 0),
                 BorderSizePixel = 0,
                 Position = UDim2.new(0, 0, 0, 27),
-                Size = UDim2.new(1, 0, 0, 1),
+                Size = UDim2.new(0, 0, 0, 0),
                 Visible = false,
             }, SectionButton)
 
@@ -1944,7 +1944,7 @@ end
                         local UIGradient = library:create("UIGradient", {
                             Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 1, 0))},
                             Rotation = 90,
-                        }, SliderFrame)
+                        })
 
                         local SliderValue = library:create("TextLabel", {
                             Name = "SliderValue",
