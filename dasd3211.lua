@@ -367,6 +367,19 @@ end
                 library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(100, 100, 100)})
             end)
 
+            local SectionDecoration = library:create("Frame", {
+                Name = "SectionDecoration",
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                BorderSizePixel = 0,
+                Position = UDim2.new(0, 0, 0, 27),
+                Size = UDim2.new(1, 0, 0, 1),
+                Visible = false,
+            }, SectionButton)
+
+            local UIGradient = library:create("UIGradient", {
+                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))},
+            }, SectionDecoration)
+
             local SectionFrame = library:create("Frame", {
                 Name = "SectionFrame",
                 BackgroundTransparency = 1,
@@ -404,6 +417,7 @@ end
                 for _,SectionButtons in pairs (TabSections:GetChildren()) do
                     if SectionButtons:IsA("UIListLayout") then continue end
                     library:tween(SectionButtons, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(100, 100, 100)})
+                    SectionButtons.SectionDecoration.Visible = false
                 end
                 for _,TabFrame in pairs (TabFrames:GetChildren()) do
                     if not TabFrame:IsA("Frame") then continue end
@@ -414,6 +428,7 @@ end
                 selected_section = SectionButton
                 SectionFrame.Visible = true
                 library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 0, 0)})
+                SectionDecoration.Visible = true
             end)
 
             if is_first_section then
@@ -422,6 +437,7 @@ end
 
                 SectionButton.TextColor3 = Color3.fromRGB(255, 0, 0) 
     
+                SectionDecoration.Visible = true
                 SectionFrame.Visible = true
             end
 
@@ -466,14 +482,14 @@ end
                 }, Border)
 
                 function sector.create_line(thickness)
-                    thickness = thickness or 0
-                    Border.Size = Border.Size + UDim2.new(0, 0, 0, thickness * 0)
+                    thickness = 0
+                    Border.Size = Border.Size + UDim2.new(0, 0, 0, thickness * 3)
 
                     local LineFrame = library:create("Frame", {
                         Name = "LineFrame",
                         BackgroundTransparency = 1,
                         Position = UDim2.new(0, 0, 0, 0),
-                        Size = UDim2.new(0, 0, 0, thickness * 0),
+                        Size = UDim2.new(0, 250, 0, thickness * 3),
                     }, Container)
 
                     local Line = library:create("Frame", {
@@ -482,7 +498,7 @@ end
                         BorderColor3 = Color3.fromRGB(0, 0, 0),
                         Position = UDim2.new(0.5, 0, 0.5, 0),
                         AnchorPoint = Vector2.new(0.5, 0.5),
-                        Size = UDim2.new(0, 0, 0, 0),
+                        Size = UDim2.new(0, 0, 0, thickness),
                     }, LineFrame)
                 end
 
