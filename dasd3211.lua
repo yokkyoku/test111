@@ -367,10 +367,57 @@ end
                 library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(100, 100, 100)})
             end)
 
+            local SectionDecoration = library:create("Frame", {
+                Name = "SectionDecoration",
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                BorderSizePixel = 0,
+                Position = UDim2.new(0, 0, 0, 27),
+                Size = UDim2.new(1, 0, 0, 1),
+                Visible = false,
+            }, SectionButton)
+
+            local UIGradient = library:create("UIGradient", {
+                Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 33, 38)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(81, 97, 243)), ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 33, 38))},
+            }, SectionDecoration)
+
+            local SectionFrame = library:create("Frame", {
+                Name = "SectionFrame",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 1, 0),
+                Visible = false,
+            }, TabFrames)
+
+            local Left = library:create("Frame", {
+                Name = "Left",
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 8, 0, 14),
+                Size = UDim2.new(0, 282, 0, 395),
+            }, SectionFrame)
+
+            local UIListLayout = library:create("UIListLayout", {
+                HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Padding = UDim.new(0, 12),
+            }, Left)
+
+            local Right = library:create("Frame", {
+                Name = "Right",
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 298, 0, 14),
+                Size = UDim2.new(0, 282, 0, 395),
+            }, SectionFrame)
+
+            local UIListLayout = library:create("UIListLayout", {
+                HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Padding = UDim.new(0, 12),
+            }, Right)
+
             SectionButton.MouseButton1Down:Connect(function()
                 for _,SectionButtons in pairs (TabSections:GetChildren()) do
                     if SectionButtons:IsA("UIListLayout") then continue end
                     library:tween(SectionButtons, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(100, 100, 100)})
+                    SectionButtons.SectionDecoration.Visible = false
                 end
                 for _,TabFrame in pairs (TabFrames:GetChildren()) do
                     if not TabFrame:IsA("Frame") then continue end
@@ -381,13 +428,16 @@ end
                 selected_section = SectionButton
                 SectionFrame.Visible = true
                 library:tween(SectionButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(84, 101, 255)})
+                SectionDecoration.Visible = true
             end)
 
             if is_first_section then
                 is_first_section = false
                 selected_section = SectionButton
 
-                SectionButton.TextColor3 = Color3.fromRGB(84, 101, 255)
+                SectionButton.TextColor3 = Color3.fromRGB(84, 101, 255) 
+    
+                SectionDecoration.Visible = true
                 SectionFrame.Visible = true
             end
 
@@ -1212,21 +1262,30 @@ end
                                 ZIndex = 2,
                             }, Button)
 
+                            local Decoration = library:create("Frame", {
+                                Name = "Decoration",
+                                BackgroundColor3 = Color3.fromRGB(84, 101, 255),
+                                BorderSizePixel = 0,
+                                Size = UDim2.new(0, 1, 1, 0),
+                                Visible = false,
+                                ZIndex = 2,
+                            }, Button)
+
                             Button.MouseEnter:Connect(function()
                                 library:tween(ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 255, 255)})
+                                Decoration.Visible = true
                             end)
                             Button.MouseLeave:Connect(function()
                                 library:tween(ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
+                                Decoration.Visible = false
                             end)
                             Button.MouseButton1Down:Connect(function()
-                                for _,DropButton in next, DropdownScroll:GetChildren() do
-                                    if not DropButton:IsA("TextButton") then continue end
-                                    library:tween(DropButton.ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
-                                end
-
-                                library:tween(ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 255, 255)})
-
+                                DropdownScroll.Visible = false
+                                DropdownButtonText.Text = v
                                 value.Dropdown = v
+
+                                library:tween(DropdownText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
+                                library:tween(DropdownButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
 
                                 do_callback()
                             end)
@@ -1452,11 +1511,27 @@ end
                                 ZIndex = 2,
                             }, Button)
 
+                            local Decoration = library:create("Frame", {
+                                Name = "Decoration",
+                                BackgroundColor3 = Color3.fromRGB(84, 101, 255),
+                                BorderSizePixel = 0,
+                                Size = UDim2.new(0, 1, 1, 0),
+                                Visible = false,
+                                ZIndex = 2,
+                            }, Button)
+
+                            local mouse_in = false
                             Button.MouseEnter:Connect(function()
-                                library:tween(ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 255, 255)})
+                                mouse_in = true
+                                if not table.find(value.Combo, v) then
+                                    library:tween(ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(200, 200, 200)})
+                                end
                             end)
                             Button.MouseLeave:Connect(function()
-                                library:tween(ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
+                                mouse_in = false
+                                if not table.find(value.Combo, v) then
+                                    library:tween(ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
+                                end
                             end)
                             Button.MouseButton1Down:Connect(function()
                                 if table.find(value.Combo, v) then
@@ -1695,9 +1770,13 @@ end
                             Button.MouseButton1Down:Connect(function()
                                 for _,Button2 in next, ScrollFrame:GetChildren() do
                                     if not Button2:IsA("TextButton") then continue end
+                                    Button2.Decoration.Visible = false
                                     library:tween(Button2.ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
                                 end
 
+                                menu.values[tab.tab_num][section_name][sector_name][flag] = value
+
+                                Decoration.Visible = true
                                 library:tween(ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 255, 255)})
 
                                 value.Scroll = v
@@ -1769,9 +1848,13 @@ end
                             Button.MouseButton1Down:Connect(function()
                                 for _,Button2 in next, ScrollFrame:GetChildren() do
                                     if not Button2:IsA("TextButton") then continue end
+                                    Button2.Decoration.Visible = false
                                     library:tween(Button2.ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
                                 end
 
+                                menu.values[tab.tab_num][section_name][sector_name][flag] = value
+
+                                Decoration.Visible = true
                                 library:tween(ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 255, 255)})
 
                                 value.Scroll = v
@@ -1791,6 +1874,7 @@ end
 
                             for _,Button2 in next, ScrollFrame:GetChildren() do
                                 if not Button2:IsA("TextButton") then continue end
+                                Button2.Decoration.Visible = false
                                 library:tween(Button2.ButtonText, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)})
                             end
                             ScrollFrame[value.Scroll].Decoration.Visible = true
