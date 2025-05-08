@@ -205,7 +205,7 @@ function ImGui.NewFrame()
                 window.instance.Position = newPos
             elseif ImGui.mouse.leftPressed and mouseInWindow then
                 -- Check if click is in title bar
-                local titleBarHeight = 28
+                local titleBarHeight = 30 -- Updated from 28 to match new titlebar height
                 if ImGui.mouse.position.Y < windowPos.Y.Offset + titleBarHeight then
                     window.dragging = true
                     window.dragOffset = Vector2.new(
@@ -1157,4 +1157,9 @@ function ImGui.SameLine(offsetX)
     window.contentArea.cursor = Vector2.new(xPos, window.contentArea.cursor.Y - ImGui.style.itemSpacing.Y)
 end
 
+-- Finalize the ImGui library
+ImGui.VERSION = "1.0.0"
+ImGui.LAST_UPDATED = "2023-07-28"
+
+-- Return the ImGui library object
 return ImGui
