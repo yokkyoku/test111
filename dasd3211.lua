@@ -179,6 +179,18 @@ function ImGui.NewFrame()
     ImGui.mouse.leftPressed = false
     ImGui.mouse.leftReleased = false
     
+    -- Clean up existing UI elements in content frames to avoid duplicates
+    for _, window in ipairs(ImGui.windows) do
+        if window.instance and window.contentFrame then
+            -- Clear all non-essential UI elements before redrawing
+            for _, child in ipairs(window.contentFrame:GetChildren()) do
+                child:Destroy()
+            end
+            -- Reset content cursor for fresh layout
+            window.contentArea.cursor = Vector2.new(0, 0)
+        end
+    end
+    
     -- Process window interactions
     for _, window in ipairs(ImGui.windows) do
         if window.instance then
