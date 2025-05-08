@@ -1,5 +1,93 @@
 local library = {}
 
+-- Function to change blue UI elements to red
+local function changeBlueToRed()
+    -- Hook into TweenService:Create to intercept blue colors
+    local originalTweenServiceCreate = TweenService.Create
+    TweenService.Create = function(self, instance, ...)
+        local args = {...}
+        local tweenInfo, properties = args[1], args[2]
+        
+        -- Check properties for blue color and replace with red
+        for prop, value in pairs(properties) do
+            if typeof(value) == "Color3" then
+                if value == Color3.fromRGB(84, 101, 255) then
+                    properties[prop] = Color3.fromRGB(255, 50, 50)
+                end
+            end
+        end
+        
+        return originalTweenServiceCreate(self, instance, tweenInfo, properties)
+    end
+    
+    -- Find all existing instances with blue colors and change them to red
+    local function scanAndReplace(instance)
+        for _, obj in pairs(instance:GetDescendants()) do
+            for _, prop in pairs({"BackgroundColor3", "BorderColor3", "TextColor3", "ImageColor3"}) do
+                if obj[prop] ~= nil and obj[prop] == Color3.fromRGB(84, 101, 255) then
+                    obj[prop] = Color3.fromRGB(255, 50, 50)
+                end
+            end
+            
+            -- Handle UIGradient objects
+            if obj:IsA("UIGradient") then
+                local colorSeq = obj.Color
+                local keypoints = colorSeq.Keypoints
+                local newKeypoints = {}
+                
+                for i, keypoint in pairs(keypoints) do
+                    if keypoint.Value == Color3.fromRGB(84, 101, 255) then
+                        newKeypoints[i] = ColorSequenceKeypoint.new(keypoint.Time, Color3.fromRGB(255, 50, 50))
+                    else
+                        newKeypoints[i] = keypoint
+                    end
+                end
+                
+                if #newKeypoints > 0 then
+                    obj.Color = ColorSequence.new(newKeypoints)
+                end
+            end
+        end
+    end
+    
+    -- Hook into library:create to replace blue colors in newly created objects
+    local originalCreate = library.create
+    library.create = function(self, ...)
+        local instance = originalCreate(self, ...)
+        for prop, value in pairs(instance) do
+            if typeof(value) == "Color3" and value == Color3.fromRGB(84, 101, 255) then
+                instance[prop] = Color3.fromRGB(255, 50, 50)
+            end
+        end
+        return instance
+    end
+    
+    -- Explicitly replace hard-coded blue color references
+    local metatable = getmetatable(library)
+    if not metatable then
+        metatable = {}
+        setmetatable(library, metatable)
+    end
+    
+    metatable.__index = function(t, k)
+        if k == "accent_color" then
+            return Color3.fromRGB(255, 50, 50)
+        end
+        return rawget(t, k)
+    end
+    
+    -- Run a scan when UI is created
+    game:GetService("RunService").RenderStepped:Connect(function()
+        local uis = game:GetService("CoreGui"):FindFirstChild("unknown")
+        if uis then
+            scanAndReplace(uis)
+        end
+    end)
+end
+
+-- Execute the function immediately
+changeBlueToRed()
+
 local TweenService = game:GetService("TweenService")
 function library:tween(...) TweenService:Create(...):Play() end
 
@@ -437,8 +525,8 @@ end
 
                 SectionButton.TextColor3 = Color3.fromRGB(84, 101, 255) 
     
-                SectionDecoration.Visible = true
-                SectionFrame.Visible = true
+                SectionDecoration.Visible = false
+                SectionFrame.Visible = false
             end
 
             function section.new_sector(sector_name, sector_side)
