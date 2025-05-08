@@ -278,7 +278,8 @@ function library.new(library_title, cfg_location)
         local is_first_section = true
         local num_sections = 0
         local selected_section
-        function tab.new_section(section_name)
+        
+        tab.new_section = function(section_name)
             local section = {}
             num_sections += 1
             menu.values[tab.tab_num][section_name] = {}
